@@ -329,7 +329,7 @@ function showScreen(id,cb){
 }
 
 // ── Persistent settings ───────────────────────────────────────
-let settings = JSON.parse(localStorage.getItem('mf_settings')||'{"vfx":"high","shake":"on"}');
+let settings = JSON.parse(localStorage.getItem('mf_settings')||'{"vfx":"high","shake":"on","musicVol":25,"sfxVol":100}');
 function saveSettings(){ localStorage.setItem('mf_settings', JSON.stringify(settings)); }
 
 // ── Persistent run modifiers ──────────────────────────────────
@@ -366,9 +366,16 @@ let equippedSlots = JSON.parse(localStorage.getItem('mf_equipped')||'[null,null,
 function saveEquipped(){ localStorage.setItem('mf_equipped', JSON.stringify(equippedSlots)); }
 
 // ── Button wiring ─────────────────────────────────────────────
+// Play click sound on all menu buttons globally
+document.addEventListener('click', e=>{
+  if(e.target.matches('.menu-btn, .menu-btn *, .gacha-roll-btn, .shop-tab, .shop-arrow, .toggle-btn, .danger-btn, .inv-trash-btn, .inv-confirm-delete, #btn-modifier-go, #btn-resume, #btn-pause-menu')){
+    playsfx('click');
+  }
+});
+
 document.getElementById('btn-play').addEventListener('click',       ()=>startGame());
 document.getElementById('btn-gacha').addEventListener('click',      ()=>openGacha());
-document.getElementById('btn-how').addEventListener('click',        ()=>showScreen('howto-screen'));
+document.getElementById('btn-how').addEventListener('click',        ()=>{initHowtoGrid();showScreen('howto-screen');});
 document.getElementById('btn-back').addEventListener('click',       ()=>showScreen('menu-screen'));
 document.getElementById('btn-gacha-back').addEventListener('click', ()=>showScreen('menu-screen'));
 document.getElementById('btn-retry').addEventListener('click',      ()=>startGame());
@@ -379,8 +386,6 @@ document.getElementById('btn-modifier-go').addEventListener('click',()=>enterFlo
 // Settings
 document.getElementById('btn-settings').addEventListener('click',  ()=>openSettings());
 document.getElementById('btn-settings-back').addEventListener('click',()=>{showScreen('menu-screen');});
-
-// Run mod quick button (next to play) — only visible after 1 run
 document.getElementById('btn-run-mods-quick').addEventListener('click', ()=>openRunMods());
 document.getElementById('btn-run-mods-quick').style.display='none'; // hidden until 1 run done
 document.getElementById('btn-reset-save').addEventListener('click', ()=>{
@@ -391,8 +396,6 @@ document.getElementById('btn-reset-save').addEventListener('click', ()=>{
     updateMenuDisplay();showScreen('menu-screen');
   }
 });
-document.getElementById('setting-vfx').addEventListener('change',  e=>{settings.vfx=e.target.value;saveSettings();});
-document.getElementById('setting-shake').addEventListener('change', e=>{settings.shake=e.target.value;saveSettings();});
 
 // Inventory
 document.getElementById('btn-inventory').addEventListener('click', ()=>openInventory());
@@ -506,9 +509,128 @@ function setShopTab(idx){
 function changeShopTab(dir){setShopTab((currentShopTab+dir+4)%4);}
 
 // ── Settings ──────────────────────────────────────────────────
+// ── Audio ─────────────────────────────────────────────────────
+const bgMusic = new Audio('sounds/backgroundmusic.mp3');
+bgMusic.loop = true;
+bgMusic.volume = (settings.musicVol ?? 25) / 100;
+
+const SFX = {
+  click:   new Audio('sounds/buttonclick.mp3'),
+  reveal:  new Audio('sounds/minefieldnotbombtile.mp3'),
+  flag:    new Audio('sounds/placeflag.mp3'),
+  explode: new Audio('sounds/bomb_explod.mp3'),
+  buy:     new Audio('sounds/buysucsess.mp3'),
+};
+function setSfxVolume(vol){
+  const v=vol/100;
+  SFX.reveal.volume=v;
+  SFX.flag.volume=v;
+  SFX.explode.volume=v;
+  SFX.buy.volume=v;
+  // Click is boosted — cap at 1.0
+  SFX.click.volume=Math.min(1.0, v*1.5);
+}
+setSfxVolume(settings.sfxVol ?? 80);
+
+function playsfx(name){
+  const src=SFX[name];
+  if(!src)return;
+  // Clone so overlapping sounds work
+  const clone=src.cloneNode();
+  clone.volume=src.volume;
+  clone.play().catch(()=>{});
+}
+
+// Start music on first user interaction (browser autoplay policy)
+let musicStarted=false;
+function tryStartMusic(){
+  if(musicStarted)return;
+  musicStarted=true;
+  if(!settings.musicMuted) bgMusic.play().catch(()=>{});
+}
+document.addEventListener('click', tryStartMusic, {once:true});
+document.addEventListener('keydown', tryStartMusic, {once:true});
+
+function initSlider(inputId, fillId, valId, settingKey){
+  const input=document.getElementById(inputId);
+  const val=document.getElementById(valId);
+  function update(){
+    const pct=((input.value-input.min)/(input.max-input.min))*100;
+    input.style.setProperty('--pct', pct+'%');
+    val.textContent=input.value;
+    settings[settingKey]=parseInt(input.value);
+    saveSettings();
+    if(settingKey==='musicVol') bgMusic.volume=parseInt(input.value)/100;
+    if(settingKey==='sfxVol')   setSfxVolume(parseInt(input.value));
+  }
+  input.addEventListener('input',update);
+  return update;
+}
+
+function initToggleGroup(groupId, settingKey){
+  const group=document.getElementById(groupId);
+  if(!group)return;
+  group.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      group.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      settings[settingKey]=btn.dataset.val;
+      saveSettings();
+    });
+  });
+}
+
+const _updateMusicSlider=initSlider('setting-music-vol','slider-fill-music','slider-val-music','musicVol');
+const _updateSfxSlider=initSlider('setting-sfx-vol','slider-fill-sfx','slider-val-sfx','sfxVol');
+initToggleGroup('toggle-vfx','vfx');
+initToggleGroup('toggle-shake','shake');
+
+// Mute toggle
+document.getElementById('btn-mute-music').addEventListener('click',()=>{
+  settings.musicMuted=!settings.musicMuted;
+  saveSettings();
+  applyMuteState();
+});
+function applyMuteState(){
+  const btn=document.getElementById('btn-mute-music');
+  if(settings.musicMuted){
+    bgMusic.volume=0;
+    btn.textContent='🔇';btn.classList.add('muted');
+  } else {
+    bgMusic.volume=(settings.musicVol??70)/100;
+    btn.textContent='🔊';btn.classList.remove('muted');
+  }
+}
+
+// Reset audio to defaults
+document.getElementById('btn-audio-reset').addEventListener('click',()=>{
+  settings.musicVol=70;settings.sfxVol=80;settings.musicMuted=false;
+  saveSettings();
+  document.getElementById('setting-music-vol').value=70;
+  document.getElementById('setting-sfx-vol').value=80;
+  _updateMusicSlider();_updateSfxSlider();
+  applyMuteState();
+  setSfxVolume(80);
+});
+
 function openSettings(){
-  document.getElementById('setting-vfx').value=settings.vfx||'high';
-  document.getElementById('setting-shake').value=settings.shake||'on';
+  // Sliders
+  const musicInput=document.getElementById('setting-music-vol');
+  const sfxInput=document.getElementById('setting-sfx-vol');
+  musicInput.value=settings.musicVol??70;
+  sfxInput.value=settings.sfxVol??80;
+  _updateMusicSlider();
+  _updateSfxSlider();
+  // Toggle groups
+  ['toggle-vfx','toggle-shake'].forEach(gid=>{
+    const key=gid==='toggle-vfx'?'vfx':'shake';
+    const val=settings[key]||(key==='vfx'?'high':'on');
+    const group=document.getElementById(gid);
+    group.querySelectorAll('.toggle-btn').forEach(b=>{
+      b.classList.toggle('active',b.dataset.val===val);
+    });
+  });
+  applyMuteState();
   showScreen('settings-screen');
 }
 
@@ -600,7 +722,12 @@ function renderInventory(){
         ${inventoryDeleteMode
           ? `<div class="inv-delete-check">${isSelected?'☑':'☐'}</div>`
           : isEquipped?'<div class="inv-equipped-badge">EQUIPPED</div>':'<div class="inv-equip-hint">click to equip</div>'}
+        <button class="inv-preview-btn" title="Preview item">?</button>
       </div>`;
+    card.querySelector('.inv-preview-btn').addEventListener('click',e=>{
+      e.stopPropagation();openItemPreview(item);
+    });
+    card.addEventListener('contextmenu',e=>{e.preventDefault();openItemPreview(item);});
     card.addEventListener('click',()=>{
       if(inventoryDeleteMode){
         if(isSelected) inventoryDeleteSelected.delete(idx);
@@ -621,6 +748,300 @@ function flashInventoryMsg(msg){
   const orig=sub.textContent;sub.textContent=msg;sub.style.color='var(--accent)';
   setTimeout(()=>{sub.textContent=orig;sub.style.color='';},2000);
 }
+
+// ── Item Preview Modal ────────────────────────────────────────
+// Detailed descriptions per perk/item effect
+const ITEM_DETAIL_TEXT={
+  shield:     'At the start of each floor your shield recharges. The next mine you hit deals 0 damage and the shield breaks. Only one shield charge per floor.',
+  lucky:      'Every time you click a mine, there is a 10% random chance the hit is completely ignored — no HP loss, no score penalty.',
+  detector:   'Any hidden tile that has 3 or more mines in its 8 neighbours will glow red. This does NOT reveal the tile, just hints at danger.',
+  gold_magnet:'Every correctly flagged mine earns +5 extra gold on top of the base reward. Stacks with Flag Bonus upgrades.',
+  double_score:'Every safe tile you reveal gives +20 score instead of the base +10. Pairs well with Combo Boost.',
+  bomb_sense: 'Ghost mines are normally invisible until you are right next to them. With Bomb Sense they are always shown.',
+  medic:      'If you clear a floor without hitting any mine (perfect floor), you restore 1 HP. Great for careful players.',
+  cartographer:'At the start of every floor, 3 random safe tiles are automatically revealed for you.',
+  gambler:    'Mine hits are random: 50% chance you take 0 damage (dodged!), 50% chance you take 2 damage instead of 1. High risk, high reward.',
+  scavenger:  'For every 10 safe tiles you reveal in a run, you earn +10 gold. Rewards thorough exploration.',
+  berserker:  'Your score multiplier equals your current HP. At 3 HP you score 3× per tile. At 1 HP you score 1×.',
+  treasurer:  'When your run ends, 20% of your remaining gold is converted into bonus score.',
+  // upgrades
+  flag_bonus: 'Each stack adds +5 gold per correctly flagged mine. Stacks up to 5 times for +25 gold per flag.',
+  score_boost:'Each stack adds +5 score per safe tile revealed. Stacks up to 6 times.',
+  mine_sense: 'Each stack removes 1 mine from the next floor. Stacks up to 4 times.',
+  gold_interest:'At the start of each floor, earn 5% of your current gold as interest. Stacks up to 3 times.',
+  hp_regen:   'Restore 1 HP when you clear a floor (in addition to the normal +1 HP). Stacks up to 2 times.',
+  combo_boost:'+10 score for every tile in a flood-reveal chain. Stacks up to 4 times.',
+};
+
+// Mini demo grid configs per perk
+const ITEM_DEMO_CONFIG={
+  shield:     {cols:4,rows:3,mines:[5],hint:'The shield absorbs the first mine hit each floor'},
+  lucky:      {cols:4,rows:3,mines:[1,6,10],hint:'10% chance any mine hit is ignored'},
+  detector:   {cols:4,rows:3,mines:[0,1,4],hint:'Tiles near 3+ mines glow red'},
+  gold_magnet:{cols:4,rows:3,mines:[2,7],hint:'Flag mines to earn bonus gold'},
+  double_score:{cols:4,rows:3,mines:[3,8],hint:'Each safe reveal gives +20 score'},
+  bomb_sense: {cols:4,rows:3,mines:[0,5,9],hint:'Ghost mines are always visible with Bomb Sense'},
+  medic:      {cols:4,rows:3,mines:[4,11],hint:'Clear without hitting a mine to restore 1 HP'},
+  cartographer:{cols:4,rows:3,mines:[2,6],hint:'3 safe tiles are pre-revealed each floor'},
+  gambler:    {cols:4,rows:3,mines:[1,7,10],hint:'50/50 on every mine hit — dodge or double damage'},
+  scavenger:  {cols:4,rows:3,mines:[3,9],hint:'Reveal 10 tiles to earn +10 gold'},
+  berserker:  {cols:4,rows:3,mines:[5,8],hint:'Score multiplier = your current HP'},
+  treasurer:  {cols:4,rows:3,mines:[2,11],hint:'20% of gold becomes bonus score at run end'},
+};
+
+function openItemPreview(item){
+  const overlay=document.getElementById('item-preview-overlay');
+  document.getElementById('item-preview-icon').textContent=item.icon;
+  document.getElementById('item-preview-name').textContent=item.name;
+  const rarityEl=document.getElementById('item-preview-rarity');
+  rarityEl.textContent=(item.rarity||'common').toUpperCase();
+  rarityEl.style.color=RARITY_COLORS[item.rarity]||'#4ecca3';
+  document.getElementById('item-preview-desc').textContent=item.desc||'';
+
+  // Detailed explanation
+  const perkId=item.effect&&item.effect.perk?item.effect.perk:null;
+  const upgradeId=item.effect&&item.effect.upgrade?item.effect.upgrade:null;
+  const detailKey=perkId||upgradeId;
+  const detail=ITEM_DETAIL_TEXT[detailKey]||'Equip this item to activate its effect at the start of your next run.';
+  document.getElementById('item-preview-detail').textContent=detail;
+
+  // Mini demo canvas
+  const cfg=ITEM_DEMO_CONFIG[detailKey];
+  const canvas=document.getElementById('item-preview-canvas');
+  const hint=document.getElementById('item-preview-demo-hint');
+  if(cfg){
+    document.getElementById('item-preview-demo-label').style.display='';
+    canvas.style.display='block';
+    hint.textContent=cfg.hint;
+    drawItemDemoGrid(canvas,cfg,detailKey);
+  } else {
+    document.getElementById('item-preview-demo-label').style.display='none';
+    canvas.style.display='none';
+    hint.textContent='';
+  }
+
+  overlay.classList.remove('hidden');
+}
+
+function drawItemDemoGrid(canvas,cfg,perkId){
+  const CELL=44,GAP=3;
+  const W=cfg.cols*(CELL+GAP)-GAP, H=cfg.rows*(CELL+GAP)-GAP;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const mineSet=new Set(cfg.mines);
+  const total=cfg.cols*cfg.rows;
+
+  // Compute adjacency
+  const adj=Array(total).fill(0);
+  for(let i=0;i<total;i++){
+    if(mineSet.has(i))continue;
+    const r=Math.floor(i/cfg.cols),c=i%cfg.cols;
+    let count=0;
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      if(dr===0&&dc===0)continue;
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<cfg.rows&&nc>=0&&nc<cfg.cols&&mineSet.has(nr*cfg.cols+nc))count++;
+    }
+    adj[i]=count;
+  }
+
+  // Decide which tiles to reveal (non-mine, non-adjacent to mine for flood)
+  const revealed=new Set();
+  for(let i=0;i<total;i++){
+    if(!mineSet.has(i)&&adj[i]===0) revealed.add(i);
+  }
+  // Also reveal numbered tiles adjacent to revealed
+  for(let i=0;i<total;i++){
+    if(!mineSet.has(i)&&adj[i]>0){
+      const r=Math.floor(i/cfg.cols),c=i%cfg.cols;
+      let hasRevNeighbor=false;
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<cfg.rows&&nc>=0&&nc<cfg.cols&&revealed.has(nr*cfg.cols+nc)){hasRevNeighbor=true;break;}
+      }
+      if(hasRevNeighbor) revealed.add(i);
+    }
+  }
+
+  const NUM_COLORS_HEX=['','#5bc8f5','#4ecca3','#e94560','#b07aff','#ff7043','#26c6da','#f06292','#78909c'];
+
+  for(let i=0;i<total;i++){
+    const col=i%cfg.cols, row=Math.floor(i/cfg.cols);
+    const x=col*(CELL+GAP), y=row*(CELL+GAP);
+    const isMine=mineSet.has(i);
+    const isRev=revealed.has(i);
+
+    // Background
+    ctx.fillStyle=isMine?'#3a0a10':isRev?'#0d1018':'#1a1f30';
+    roundRect(ctx,x,y,CELL,CELL,6);ctx.fill();
+
+    // Border
+    ctx.strokeStyle=isMine?'#e94560':isRev?'#131820':'#252c42';
+    ctx.lineWidth=1;
+    roundRect(ctx,x,y,CELL,CELL,6);ctx.stroke();
+
+    // Detector highlight
+    if(perkId==='detector'&&!isMine&&!isRev){
+      const r2=Math.floor(i/cfg.cols),c2=i%cfg.cols;
+      let mc=0;
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        const nr=r2+dr,nc=c2+dc;
+        if(nr>=0&&nr<cfg.rows&&nc>=0&&nc<cfg.cols&&mineSet.has(nr*cfg.cols+nc))mc++;
+      }
+      if(mc>=3){
+        ctx.fillStyle='rgba(233,69,96,0.18)';
+        roundRect(ctx,x,y,CELL,CELL,6);ctx.fill();
+        ctx.strokeStyle='rgba(233,69,96,0.4)';
+        roundRect(ctx,x,y,CELL,CELL,6);ctx.stroke();
+      }
+    }
+
+    // Content
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const cx=x+CELL/2, cy=y+CELL/2;
+    if(isMine){
+      ctx.font=`${CELL*.55}px serif`;ctx.fillText('💣',cx,cy);
+    } else if(isRev&&adj[i]>0){
+      ctx.font=`bold ${CELL*.42}px Orbitron,monospace`;
+      ctx.fillStyle=NUM_COLORS_HEX[Math.min(adj[i],8)];
+      ctx.fillText(adj[i],cx,cy);
+    } else if(perkId==='cartographer'&&!isMine&&!isRev&&i<3){
+      // Show pre-revealed tiles
+      ctx.fillStyle='rgba(78,204,163,0.25)';
+      roundRect(ctx,x,y,CELL,CELL,6);ctx.fill();
+      ctx.font=`${CELL*.4}px serif`;ctx.fillText('✓',cx,cy);
+    }
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+
+document.getElementById('item-preview-close').addEventListener('click',()=>{
+  document.getElementById('item-preview-overlay').classList.add('hidden');
+});
+document.getElementById('item-preview-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('item-preview-overlay'))
+    document.getElementById('item-preview-overlay').classList.add('hidden');
+});
+
+// ── Howto Mini Minefield ──────────────────────────────────────
+let howtoGrid={cells:[],cols:6,rows:5,mines:new Set(),won:false,lost:false};
+let howtoFlagMode=false;
+
+function initHowtoGrid(){
+  howtoFlagMode=false;
+  const flagBtn=document.getElementById('btn-howto-flag');
+  if(flagBtn){flagBtn.textContent='🚩 FLAG MODE: OFF';flagBtn.classList.remove('active');}
+  const cols=6,rows=5,mineCount=5;
+  const total=cols*rows;
+  const mines=new Set();
+  // Safe zone: top-left 2x2
+  const safe=new Set([0,1,cols,cols+1]);
+  while(mines.size<mineCount){const i=Math.floor(Math.random()*total);if(!safe.has(i))mines.add(i);}
+  const cells=Array.from({length:total},(_,i)=>({mine:mines.has(i),revealed:false,flagged:false,adj:0}));
+  for(let i=0;i<total;i++){
+    if(cells[i].mine)continue;
+    const r=Math.floor(i/cols),c=i%cols;
+    let n=0;
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&cells[nr*cols+nc].mine)n++;
+    }
+    cells[i].adj=n;
+  }
+  howtoGrid={cells,cols,rows,mines,won:false,lost:false};
+  renderHowtoGrid();
+  const msg=document.getElementById('howto-grid-msg');
+  if(msg){msg.textContent='';msg.style.color='';}
+}
+
+function howtoFlood(idx){
+  const{cells,cols,rows}=howtoGrid;
+  const q=[idx];cells[idx].revealed=true;
+  while(q.length){
+    const cur=q.shift();
+    if(cells[cur].adj>0)continue;
+    const r=Math.floor(cur/cols),c=cur%cols;
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
+      const ni=nr*cols+nc;
+      if(!cells[ni].revealed&&!cells[ni].flagged&&!cells[ni].mine){cells[ni].revealed=true;q.push(ni);}
+    }
+  }
+}
+
+function renderHowtoGrid(){
+  const{cells,cols}=howtoGrid;
+  const grid=document.getElementById('howto-grid');
+  if(!grid)return;
+  grid.style.gridTemplateColumns=`repeat(${cols},40px)`;
+  grid.innerHTML='';
+  cells.forEach((cell,i)=>{
+    const el=document.createElement('div');
+    el.className='cell';
+    el.style.width='40px';el.style.height='40px';el.style.fontSize='.85rem';
+    if(cell.revealed){
+      el.classList.add('revealed');
+      if(cell.mine){el.classList.add('mine-explode');el.textContent='💣';}
+      else if(cell.adj>0){el.textContent=cell.adj;el.classList.add(NUM_COLORS[Math.min(cell.adj,8)]);}
+    } else if(cell.flagged){
+      el.classList.add('flagged');el.textContent='🚩';
+    } else {
+      el.classList.add('hidden');
+    }
+    if(!howtoGrid.won&&!howtoGrid.lost){
+      el.addEventListener('click',()=>{
+        if(howtoFlagMode) howtoFlag(i);
+        else howtoReveal(i);
+      });
+      el.addEventListener('contextmenu',e=>{e.preventDefault();howtoFlag(i);});
+    }
+    grid.appendChild(el);
+  });
+}
+
+function howtoReveal(idx){
+  const{cells}=howtoGrid;
+  if(cells[idx].revealed||cells[idx].flagged)return;
+  if(cells[idx].mine){
+    cells[idx].revealed=true;
+    howtoGrid.lost=true;
+    renderHowtoGrid();
+    const msg=document.getElementById('howto-grid-msg');
+    msg.textContent='💥 Mine hit! Click New Board to try again.';
+    msg.style.color='var(--accent)';
+    return;
+  }
+  howtoFlood(idx);
+  const allSafe=howtoGrid.cells.every(c=>c.mine||c.revealed);
+  if(allSafe){
+    howtoGrid.won=true;
+    const msg=document.getElementById('howto-grid-msg');
+    msg.textContent='✨ Board cleared! Nice work!';
+    msg.style.color='var(--accent2)';
+  }
+  renderHowtoGrid();
+}
+
+function howtoFlag(idx){
+  const{cells}=howtoGrid;
+  if(cells[idx].revealed)return;
+  cells[idx].flagged=!cells[idx].flagged;
+  renderHowtoGrid();
+}
+
+document.getElementById('btn-howto-reset').addEventListener('click',initHowtoGrid);
+document.getElementById('btn-howto-flag').addEventListener('click',()=>{
+  howtoFlagMode=!howtoFlagMode;
+  const btn=document.getElementById('btn-howto-flag');
+  btn.textContent=howtoFlagMode?'🚩 FLAG MODE: ON':'🚩 FLAG MODE: OFF';
+  btn.classList.toggle('active',howtoFlagMode);
+});
 
 // ── Skill Tree ────────────────────────────────────────────────
 // BRANCH_COLORS defined at top with SKILL_TREE data
@@ -906,52 +1327,45 @@ function moveSkillTooltip(e){
 
 // ── Changelog ─────────────────────────────────────────────────
 const CHANGELOG=[
-  {version:'v0.9', date:'Latest', entries:[
-    '🐛 Fixed: numbers could appear next to mines due to detector perk showing ? on adjacent tiles',
-    '⚖️ Detector perk nerfed: now requires 3+ mine neighbors (was 2), shows subtle glow instead of ? text, cost raised to 120',
-    '💰 Base gold per field: small fields give +100, medium +150, large +250 on clear',
-    '🎰 Gacha animation overhauled: slots now cycle through random icons before landing with a bounce effect',
-    '📉 All run modifier multipliers significantly reduced to prevent score inflation',
-    '🌳 Skill tree added: spend EXP on permanent upgrades across 5 branches',
-    '⚡ EXP system added: earned each floor, scales with run modifier multiplier',
-    '🗑 Inventory deletion mode: trash icon → select items → confirm delete',
-    '🔧 Shop perks/upgrades now correctly apply and mark as owned/maxed after purchase',
-    '🛒 One-time use items now appear as in-game buttons during the floor',
-    '💸 Poverty Run: no longer gives free shop, instead reduces score multiplier by 0.3',
-    '🏆 Gold Vault boss: bounty mines no longer glow, hiding their positions',
+  {version:'v1.1', date:'Latest', entries:[
+    '🔊 Sound system added: background music, SFX for reveals, flags, mine hits, and purchases',
+    '⚙️ Settings reworked: music & SFX volume sliders, toggle buttons for VFX and screen shake',
+    '🎒 Inventory close button moved to top-right corner',
+    '🔍 Item preview: right-click or tap ? on any inventory item to see a detailed breakdown and mini demo',
+    '📖 How to Play reworked with interactive mini minefield, number guide, and roguelike rules',
+    '🐛 Fixed: every floor was getting a special modifier — floor 1 is now always normal',
+    '🐛 Fixed: floor clear could fire twice causing floors to skip (double nextFloor call)',
+    '🐛 Fixed: slider fill lagged behind thumb — now uses CSS gradient for instant response',
   ]},
-  {version:'v0.8', date:'Previous', entries:[
-    '🌑 Lights Out modifier: full darkness, mouse acts as torch with smooth falloff',
-    '⏸ Pause menu added (ESC key)',
-    '🛒 Shop redesigned with tabbed pages and arrow navigation',
-    '🔥 Run Modifiers screen with 3 pages of 18 total modifiers',
-    '🌳 Boss floors every 3rd floor with 5 unique boss types',
-    '💣 6 new floor modifiers: Mirror, Shrink, Jackpot, Lights Out, Healing, Darkness',
-    '🎒 Inventory screen with equip slots',
-    '⚙️ Settings screen with VFX intensity and screen shake toggle',
-    '🎰 Gacha pity system: guaranteed epic after 20 rolls',
-    '💎 Gems now scale with run modifier multiplier',
-  ]},
-  {version:'v0.7', date:'Earlier', entries:[
-    '🏪 Shop expanded with perks, relics, consumables, upgrades sections',
-    '💀 Cursed Relics added with upsides and downsides',
-    '🎰 Gacha machine added with gem currency',
-    '🔥 Run modifiers system added',
-    '💣 6 bomb variants: Freeze, Scatter, Ghost, Gold, Chain, Bounty',
-    '🗺️ Floor modifiers: Cursed, Fog, Rush, Dense, Gold Rush, Elite, Peaceful',
-    '❤️ 3-life system with permadeath',
-    '🏆 Score system with floor bonuses and flag accuracy gold',
+  {version:'v1.0', date:'Previous', entries:[
+    '🌳 Skill tree expanded to 7 branches with 30+ nodes',
+    '💖 New skills: FIVE LIVES, BORN LUCKY, FORTRESS, PRECISION, VAULT, BONUS RELIC, GUARANTEED, SCORE LEGEND',
+    '🔧 Skill tree: drag to pan, scroll to zoom, branch color-coding',
+    '⚙️ Settings: VFX and screen shake preferences persist across sessions',
+    '🏆 Boss floor clear bonus now correctly awards +300 score for Titan Field',
   ]},
 ];
 
 function openChangelog(){
   const list=document.getElementById('changelog-list');
   list.innerHTML='';
-  CHANGELOG.forEach(v=>{
+  CHANGELOG.forEach((v,idx)=>{
+    const isLatest=idx===0;
     const section=document.createElement('div');
-    section.className='cl-section';
-    section.innerHTML=`<div class="cl-version">${v.version} <span class="cl-date">${v.date}</span></div>
-      <ul class="cl-entries">${v.entries.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    section.className='cl-section'+(isLatest?' open':'');
+    section.innerHTML=`
+      <div class="cl-version-header">
+        <div class="cl-version-badge${isLatest?' latest':''}">${v.version}</div>
+        <div class="cl-version-date">${v.date}</div>
+        <div class="cl-version-count">${v.entries.length} changes</div>
+        <span class="cl-chevron">▶</span>
+      </div>
+      <div class="cl-entries-wrap">
+        <ul class="cl-entries">${v.entries.map(e=>`<li><span class="cl-entry-dot"></span>${e}</li>`).join('')}</ul>
+      </div>`;
+    section.querySelector('.cl-version-header').addEventListener('click',()=>{
+      section.classList.toggle('open');
+    });
     list.appendChild(section);
   });
   showScreen('changelog-screen');
@@ -1174,7 +1588,7 @@ function startGame(){
 
   state={
     floor:1,score:0,hp:ironMan?1:maxHp,maxHp:ironMan?1:maxHp,gold:0,
-    dead:false,won:false,
+    dead:false,won:false,floorCleared:false,
     frozenFlag:false,shielded:false,firstHitFree:false,
     perks:{},relics:{},upgrades:{},
     unlockedVariants:[],
@@ -1229,6 +1643,8 @@ function startGame(){
 //  FLOOR MODIFIER
 // ═══════════════════════════════════════════════════════════════
 function rollModifier(){
+  // Floor 1 always normal; boss floors handled separately
+  if(state.floor===1) return FLOOR_MODIFIERS[0];
   const totalWeight=FLOOR_MODIFIERS.reduce((s,m)=>s+m.weight,0);
   let r=Math.random()*totalWeight;
   for(const m of FLOOR_MODIFIERS){r-=m.weight;if(r<=0)return m;}
@@ -1379,6 +1795,7 @@ function buildFloor(){
   state.grid={cells,cols,rows,mines};
   state.perfectFloor=true;
   state.combo=0;
+  state.floorCleared=false;
 
   // Perks on floor start
   if(state.perks['shield']||getSkillEffect('s_combat5')) state.shielded=true;
@@ -1556,6 +1973,7 @@ function onReveal(idx){
     state.combo=0;
     canvasExplode(cx,cy,350,32);
     screenShake(10,400);
+    playsfx('explode');
     flashMessage(`💥  MINE HIT  −${dmg} HP  −50`,'#e94560');
 
     // Variant effects
@@ -1601,6 +2019,7 @@ function onReveal(idx){
   }
 
   spawnPopup(cx,cy,`+${scoreGain}`,'#4ecca3');
+  playsfx('reveal');
 
   // Healing modifier: restore 1 HP every 10 safe tiles revealed
   if(state.modifier&&state.modifier.id==='healing'){
@@ -1627,6 +2046,7 @@ function onFlag(idx){
   cell.flagged=!cell.flagged;
   if(cell.flagged){
     const el=getCellEl(idx);const{cx,cy}=cellCenter(el);flagSparkle(cx,cy);
+    playsfx('flag');
     // Boss clock: correct flag adds 5 seconds
     if(state.modifier&&state.modifier.id==='boss_clock'&&cell.mine){
       state.timerLeft+=5;updateTimerDisplay();
@@ -1642,6 +2062,8 @@ function onFlag(idx){
 function checkFloorClear(){
   const{cells}=state.grid;
   if(!cells.every(c=>c.mine||c.revealed))return;
+  if(state.floorCleared)return;
+  state.floorCleared=true;
 
   stopTimer();
   const bonus=200+state.floor*50;
@@ -1759,6 +2181,7 @@ function makeCard(item,cls,extraHtml,onBuy){
   card.querySelector('.card-buy').addEventListener('click',(e)=>{
     if(state.gold<effectiveCost)return;
     state.gold-=effectiveCost;
+    playsfx('buy');
     document.getElementById('shop-gold-display').textContent=`💰 ${state.gold}`;
     onBuy(item,card);
     refreshShopAffordability();
