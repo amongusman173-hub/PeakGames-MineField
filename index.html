@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MINEFIELD</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- MAIN MENU -->
+  <div id="menu-screen" class="screen">
+    <button id="btn-settings" class="corner-settings-btn" title="Settings">⚙</button>
+    <div id="menu-content">
+      <div id="menu-logo">
+        <div class="logo-mine">💣</div>
+        <h1>MINEFIELD</h1>
+        <p class="logo-sub">A ROGUELIKE</p>
+      </div>
+      <div id="menu-buttons">
+        <div class="play-row">
+          <button class="menu-btn primary" id="btn-play">PLAY</button>
+          <button class="menu-btn run-mod-quick-btn" id="btn-run-mods-quick" title="Run Modifiers">🔥</button>
+        </div>
+        <button class="menu-btn gacha-btn" id="btn-gacha">🎰 GACHA MACHINE</button>
+        <button class="menu-btn inventory-btn" id="btn-inventory">🎒 INVENTORY</button>
+        <button class="menu-btn skill-btn" id="btn-skill">🌳 SKILL TREE</button>
+        <button class="menu-btn" id="btn-how">HOW TO PLAY</button>
+        <button class="menu-btn changelog-btn" id="btn-changelog">📋 CHANGELOG</button>
+      </div>
+      <div id="menu-footer">
+        <div id="best-score-display"></div>
+        <div id="gems-display"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settings-screen" class="screen hidden">
+    <div class="panel-box">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-icon">⚙</div>
+          <div>
+            <h2 class="panel-title">SETTINGS</h2>
+            <p class="panel-sub">Adjust your experience</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-label">DISPLAY</div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">VFX Intensity</span>
+            <span class="setting-hint">Particle effects and explosions</span>
+          </div>
+          <select id="setting-vfx" class="setting-select">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">Screen Shake</span>
+            <span class="setting-hint">Camera shake on mine hits</span>
+          </div>
+          <select id="setting-shake" class="setting-select">
+            <option value="on">On</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-label danger-label">DANGER ZONE</div>
+        <div class="danger-zone">
+          <div class="danger-info">
+            <span class="setting-name">Reset All Progress</span>
+            <span class="setting-hint">Deletes gems, gacha items, runs, and best score</span>
+          </div>
+          <button class="danger-btn" id="btn-reset-save">RESET</button>
+        </div>
+      </div>
+      <button class="menu-btn primary" id="btn-settings-back">← BACK</button>
+    </div>
+  </div>
+
+  <!-- INVENTORY SCREEN -->
+  <div id="inventory-screen" class="screen hidden">
+    <div class="panel-box wide">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-icon">🎒</div>
+          <div>
+            <h2 class="panel-title">INVENTORY</h2>
+            <p class="panel-sub" id="inventory-sub">Equip up to 3 items — active on your next run</p>
+          </div>
+        </div>
+        <div class="panel-header-right" id="inventory-gems-display"></div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">EQUIPPED SLOTS</div>
+        <div id="equipped-slots">
+          <div class="equipped-slot empty" data-slot="0"><span class="slot-num">1</span><span class="slot-empty-text">EMPTY</span></div>
+          <div class="equipped-slot empty" data-slot="1"><span class="slot-num">2</span><span class="slot-empty-text">EMPTY</span></div>
+          <div class="equipped-slot empty" data-slot="2"><span class="slot-num">3</span><span class="slot-empty-text">EMPTY</span></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">COLLECTION <span id="inv-count-label" style="color:var(--dim);font-weight:400"></span></div>
+        <div id="inventory-list"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="menu-btn primary" id="btn-inventory-back">← BACK</button>
+        <button class="inv-trash-btn" id="inv-trash-btn">🗑 DELETE</button>
+        <button class="inv-confirm-delete" id="inv-confirm-delete" style="display:none">DELETE 0 ITEMS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RUN MODIFIERS SCREEN -->
+  <div id="run-mods-screen" class="screen hidden">
+    <div class="panel-box wide">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-icon" style="color:var(--accent)">🔥</div>
+          <div>
+            <h2 class="panel-title" style="color:var(--accent)">RUN MODIFIERS</h2>
+            <p class="panel-sub">Stack difficulty for bigger score multipliers</p>
+          </div>
+        </div>
+        <div class="panel-header-right">
+          <div class="run-mods-mult-display">
+            <div class="rmd-label">MULTIPLIER</div>
+            <div class="rmd-val" id="run-mods-mult">×1.0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="run-mods-list"></div>
+      <div id="run-mods-nav"></div>
+
+      <div style="display:flex;gap:10px">
+        <button class="menu-btn primary" id="btn-run-mods-back">← BACK</button>
+        <button class="menu-btn" id="btn-run-mods-reset" style="border-color:var(--accent);color:var(--accent)">RESET ALL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILL TREE SCREEN -->
+  <div id="skill-screen" class="screen hidden">
+    <div id="skill-screen-inner">
+      <div id="skill-header">
+        <div id="skill-header-left">
+          <span class="skill-header-icon">🌳</span>
+          <div>
+            <div class="skill-header-title">SKILL TREE</div>
+            <div class="skill-header-sub">Spend EXP to unlock permanent upgrades · drag to pan · scroll to zoom</div>
+          </div>
+        </div>
+        <div id="skill-exp-display"></div>
+      </div>
+      <div id="skill-tree-container"></div>
+      <button class="menu-btn primary" id="btn-skill-back" style="width:160px;margin:0 auto">← BACK</button>
+    </div>
+  </div>
+
+  <!-- GACHA SCREEN -->
+  <div id="gacha-screen" class="screen hidden">
+    <div id="gacha-box">
+      <div id="gacha-header">
+        <h2>🎰 GACHA MACHINE</h2>
+        <div id="gacha-gems-display"></div>
+      </div>
+      <p id="gacha-sub">Spend gems earned from runs to roll starting upgrades</p>
+      <div id="gacha-machine">
+        <div id="gacha-slots">
+          <div class="gacha-slot" id="slot-0">?</div>
+          <div class="gacha-slot" id="slot-1">?</div>
+          <div class="gacha-slot" id="slot-2">?</div>
+        </div>
+        <div id="gacha-btns">
+          <button class="gacha-roll-btn" id="btn-roll1">ROLL ×1 — 💎10</button>
+          <button class="gacha-roll-btn gold" id="btn-roll3">ROLL ×3 — 💎25</button>
+        </div>
+        <div id="gacha-pity"></div>
+        <div id="gacha-result"></div>
+      </div>
+      <div id="gacha-inventory">
+        <div class="gacha-inv-title">STARTING UPGRADES (active next run)</div>
+        <div id="gacha-inv-list"></div>
+      </div>
+      <button class="menu-btn primary" id="btn-gacha-back">← BACK</button>
+    </div>
+  </div>
+
+  <!-- CHANGELOG SCREEN -->
+  <div id="changelog-screen" class="screen hidden">
+    <div class="panel-box" style="width:min(600px,95vw);max-height:85vh;overflow-y:auto">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-icon">📋</div>
+          <div><h2 class="panel-title">CHANGELOG</h2><p class="panel-sub">What's new</p></div>
+        </div>
+      </div>
+      <div id="changelog-list"></div>
+      <button class="menu-btn primary" id="btn-changelog-back">← BACK</button>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto-screen" class="screen hidden">
+    <div id="howto-box">
+      <h2>HOW TO PLAY</h2>
+      <ul>
+        <li><span class="key">Left Click</span> Reveal a tile</li>
+        <li><span class="key">Right Click</span> Flag a mine — scored at floor end</li>
+        <li>Numbers show adjacent mine count</li>
+        <li>Reveal all safe tiles to clear the floor</li>
+        <li>You have <span class="hl">3 lives</span> — each mine hit costs one</li>
+        <li>Lose all lives = <span class="hl red">permadeath</span></li>
+        <li>After each floor, visit the <span class="hl">SHOP</span></li>
+        <li>Watch for <span class="hl">floor modifiers</span> — they change the rules!</li>
+        <li>Earn <span class="hl">💎 gems</span> from runs to spend in the Gacha Machine</li>
+      </ul>
+      <button class="menu-btn primary" id="btn-back">BACK</button>
+    </div>
+  </div>
+
+  <!-- MODIFIER REVEAL (between floors) -->
+  <div id="modifier-screen" class="screen hidden">
+    <div id="modifier-box">
+      <div id="modifier-floor-label"></div>
+      <div id="modifier-icon"></div>
+      <div id="modifier-name"></div>
+      <div id="modifier-desc"></div>
+      <div id="modifier-relics"></div>
+      <button class="menu-btn primary" id="btn-modifier-go">ENTER FLOOR →</button>
+    </div>
+  </div>
+
+  <!-- PAUSE SCREEN -->
+  <div id="pause-screen" class="screen hidden">
+    <div id="pause-box">
+      <div id="pause-icon">⏸</div>
+      <h2 id="pause-title">PAUSED</h2>
+      <div id="pause-stats"></div>
+      <div id="pause-buttons">
+        <button class="menu-btn primary" id="btn-resume">▶ RESUME</button>
+        <button class="menu-btn" id="btn-pause-menu">QUIT TO MENU</button>
+      </div>
+      <p class="pause-hint">Press ESC to resume</p>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen hidden">
+    <div id="hud">
+      <div class="hud-block">
+        <div class="hud-label">FLOOR</div>
+        <div class="hud-val accent2" id="hud-floor">1</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">SCORE</div>
+        <div class="hud-val" id="hud-score">0</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">MINES LEFT</div>
+        <div class="hud-val warn" id="hud-mines">0</div>
+      </div>
+      <div class="hud-block hud-hp-block">
+        <div class="hud-label">LIVES</div>
+        <div class="hud-val" id="hud-hp"></div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">GOLD</div>
+        <div class="hud-val gold" id="hud-gold">0</div>
+      </div>
+      <div class="hud-block" id="hud-timer-block" style="display:none">
+        <div class="hud-label">TIME</div>
+        <div class="hud-val" id="hud-timer">--</div>
+      </div>
+    </div>
+    <div id="modifier-banner"></div>
+    <div id="message-bar"></div>
+    <div id="bomb-legend"></div>
+    <div id="consumable-bar"></div>
+    <div id="grid-wrap"><div id="grid"></div></div>
+  </div>
+
+  <!-- SHOP SCREEN -->
+  <div id="shop-screen" class="screen hidden">
+    <div id="shop-box">
+      <div id="shop-header">
+        <div id="shop-header-left">
+          <h2 id="shop-title">🛒 SHOP</h2>
+          <div id="shop-subtitle"></div>
+        </div>
+        <div id="shop-gold-display"></div>
+      </div>
+
+      <!-- Tab nav -->
+      <div id="shop-tabs">
+        <button class="shop-tab active" data-tab="0">⭐ PERKS</button>
+        <button class="shop-tab" data-tab="1">💀 RELICS</button>
+        <button class="shop-tab" data-tab="2">⚡ USE</button>
+        <button class="shop-tab" data-tab="3">📈 UPGRADES</button>
+      </div>
+
+      <!-- Tab pages -->
+      <div id="shop-pages">
+        <div class="shop-page active" id="shop-page-0">
+          <div class="shop-page-header">
+            <span class="shop-page-title" style="color:var(--perk-color)">⭐ PERKS</span>
+            <span class="shop-page-sub">Permanent passive bonuses</span>
+          </div>
+          <div class="shop-items-grid" id="shop-perks"></div>
+        </div>
+        <div class="shop-page" id="shop-page-1">
+          <div class="shop-page-header">
+            <span class="shop-page-title" style="color:var(--relic-color)">💀 CURSED RELICS</span>
+            <span class="shop-page-sub">Power with a price</span>
+          </div>
+          <div class="shop-items-grid" id="shop-relics"></div>
+        </div>
+        <div class="shop-page" id="shop-page-2">
+          <div class="shop-page-header">
+            <span class="shop-page-title" style="color:var(--use-color)">⚡ ONE-TIME USE</span>
+            <span class="shop-page-sub">Instant consumables</span>
+          </div>
+          <div class="shop-items-grid" id="shop-oneuse"></div>
+        </div>
+        <div class="shop-page" id="shop-page-3">
+          <div class="shop-page-header">
+            <span class="shop-page-title" style="color:var(--upg-color)">📈 UPGRADES</span>
+            <span class="shop-page-sub">Stackable stat boosts</span>
+          </div>
+          <div class="shop-items-grid" id="shop-upgrades"></div>
+        </div>
+      </div>
+
+      <!-- Arrow nav -->
+      <div id="shop-nav">
+        <button class="shop-arrow" id="shop-prev">◀</button>
+        <div id="shop-dots">
+          <span class="shop-dot active" data-tab="0"></span>
+          <span class="shop-dot" data-tab="1"></span>
+          <span class="shop-dot" data-tab="2"></span>
+          <span class="shop-dot" data-tab="3"></span>
+        </div>
+        <button class="shop-arrow" id="shop-next">▶</button>
+      </div>
+
+      <button class="menu-btn primary wide" id="btn-continue">CONTINUE TO FLOOR <span id="next-floor-num">2</span> →</button>
+    </div>
+  </div>
+
+  <!-- DEATH / WIN SCREEN -->
+  <div id="end-screen" class="screen hidden">
+    <div id="end-box">
+      <div id="end-icon"></div>
+      <h2 id="end-title"></h2>
+      <div id="end-stats"></div>
+      <div id="end-perks-display"></div>
+      <div id="end-buttons">
+        <button class="menu-btn primary" id="btn-retry">PLAY AGAIN</button>
+        <button class="menu-btn" id="btn-menu">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
