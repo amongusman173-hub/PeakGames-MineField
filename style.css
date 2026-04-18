@@ -802,8 +802,8 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   background:#0d0f16;border:1px solid #e94560;border-radius:16px;
   width:min(640px,96vw);max-height:88vh;display:flex;flex-direction:column;
   overflow:hidden;position:relative;
-  animation:admin-slide-in .45s cubic-bezier(.22,1,.36,1) forwards,
-             admin-glow 3s ease-in-out .5s infinite;
+  animation:admin-slide-in .22s cubic-bezier(.22,1,.36,1) forwards,
+             admin-glow 3s ease-in-out .3s infinite;
 }
 #admin-panel.closing{
   animation:admin-slide-out .22s ease-in forwards!important;
@@ -812,7 +812,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 #admin-panel::after{
   content:'';position:absolute;left:0;right:0;height:3px;top:0;
   background:linear-gradient(90deg,transparent,#e9456066,#e94560cc,#e9456066,transparent);
-  animation:admin-scan .55s ease-out .05s forwards;
+  animation:admin-scan .3s ease-out .02s forwards;
   pointer-events:none;z-index:20;
 }
 
@@ -1117,15 +1117,16 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 /* ── Admin panel scrollable fix ── */
 .admin-page{overflow-y:auto;flex:1;min-height:0}
-/* Staggered tab pop-in */
-#admin-tabs .admin-tab{opacity:0;animation:tab-pop .3s ease forwards;}
-#admin-tabs .admin-tab:nth-child(1){animation-delay:.18s}
-#admin-tabs .admin-tab:nth-child(2){animation-delay:.24s}
-#admin-tabs .admin-tab:nth-child(3){animation-delay:.30s}
-#admin-tabs .admin-tab:nth-child(4){animation-delay:.36s}
-#admin-tabs .admin-tab:nth-child(5){animation-delay:.42s}
+/* Staggered tab pop-in — fast */
+#admin-tabs .admin-tab{opacity:0;animation:tab-pop .18s ease forwards;}
+#admin-tabs .admin-tab:nth-child(1){animation-delay:.08s}
+#admin-tabs .admin-tab:nth-child(2){animation-delay:.11s}
+#admin-tabs .admin-tab:nth-child(3){animation-delay:.14s}
+#admin-tabs .admin-tab:nth-child(4){animation-delay:.17s}
+#admin-tabs .admin-tab:nth-child(5){animation-delay:.20s}
+#admin-tabs .admin-tab:nth-child(6){animation-delay:.23s}
 /* Page content slide on tab switch */
-.admin-page.active{animation:page-fade .18s ease forwards;}
+.admin-page.active{animation:page-fade .12s ease forwards;}
 
 /* ═══════════════════════════════════════════════════════════════
    PRIVACY POLICY

@@ -29,12 +29,12 @@ const SKILL_TREE=[
   {id:'s_hp2',      icon:'💗', name:'VITALITY',      desc:'Start every run with +2 max HP (total +3).',   cost:250, req:['s_shield1'],            branch:'survival', x:140,  y:-430},
   {id:'s_hp_max',   icon:'💖', name:'FIVE LIVES',    desc:'Max HP cap raised to 5.',                      cost:500, req:['s_hp2'],                branch:'survival', x:0,    y:-530},
   {id:'s_lucky1',   icon:'🍀', name:'BORN LUCKY',    desc:'Lucky Charm perk chance raised to 20%.',       cost:200, req:['s_regen1'],             branch:'survival', x:-280, y:-430},
-  // ── INVENTORY (top-left) ──
-  {id:'s_inv1',     icon:'🎒', name:'EXTRA POCKET',  desc:'Inventory capacity +2 (max 14).',              cost:80,  req:['s_root'],               branch:'inventory',x:-220, y:-120},
-  {id:'s_inv2',     icon:'🗃️', name:'BACKPACK',      desc:'Inventory capacity +4 (max 18).',              cost:200, req:['s_inv1'],               branch:'inventory',x:-360, y:-200},
-  {id:'s_slots1',   icon:'🔧', name:'EXTRA SLOT',    desc:'Equip 4 items instead of 3.',                  cost:300, req:['s_inv2'],               branch:'inventory',x:-480, y:-120},
-  {id:'s_inv3',     icon:'📦', name:'WAREHOUSE',     desc:'Inventory capacity +6 (max 24).',              cost:450, req:['s_slots1'],             branch:'inventory',x:-480, y:-260},
-  {id:'s_inv4',     icon:'🏛️', name:'VAULT',         desc:'Inventory capacity +10 (max 34).',             cost:700, req:['s_inv3'],               branch:'inventory',x:-360, y:-360},
+  // ── INVENTORY (top-left) — equip slots ──
+  {id:'s_inv1',     icon:'🎒', name:'EXTRA SLOT I',   desc:'Equip 4 items instead of 3.',                  cost:80,  req:['s_root'],               branch:'inventory',x:-220, y:-120},
+  {id:'s_inv2',     icon:'🎒', name:'EXTRA SLOT II',  desc:'Equip 5 items instead of 4.',                  cost:200, req:['s_inv1'],               branch:'inventory',x:-360, y:-200},
+  {id:'s_slots1',   icon:'🔧', name:'EXTRA SLOT III', desc:'Equip 6 items instead of 5.',                  cost:350, req:['s_inv2'],               branch:'inventory',x:-480, y:-120},
+  {id:'s_inv3',     icon:'📦', name:'LOADOUT MASTER', desc:'Equipped items apply effects twice.',           cost:600, req:['s_slots1'],             branch:'inventory',x:-480, y:-260},
+  {id:'s_inv4',     icon:'🏛️', name:'ARSENAL',        desc:'Start each run with all 6 slots pre-equipped.',cost:900, req:['s_inv3'],               branch:'inventory',x:-360, y:-360},
   // ── SHOP (top-right) ──
   {id:'s_shop1',    icon:'🏪', name:'BARGAIN EYE',   desc:'Shop shows 1 extra item per section.',         cost:100, req:['s_root'],               branch:'shop',     x:220,  y:-120},
   {id:'s_shop2',    icon:'🔮', name:'LUCKY STOCK',   desc:'Shop rerolls once for free each visit.',       cost:220, req:['s_shop1'],              branch:'shop',     x:360,  y:-200},
@@ -71,10 +71,14 @@ function skillMaxHp(){
   return bonus;
 }
 function skillMaxInventory(){
-  // Hard cap at 100 regardless of skill tree
-  return 100;
+  return 250;
 }
-function skillEquipSlots(){return getSkillEffect('s_slots1')?4:3;}
+function skillEquipSlots(){
+  if(getSkillEffect('s_slots1')) return 6;
+  if(getSkillEffect('s_inv2'))   return 5;
+  if(getSkillEffect('s_inv1'))   return 4;
+  return 3;
+}
 function skillShopExtra(){return getSkillEffect('s_shop1')?1:0;}
 function skillPity(){
   if(getSkillEffect('s_gacha4')) return 10;
@@ -1790,9 +1794,11 @@ function startGame(){
   if(activeRunMods.includes('no_gold')){state.gold=0;}
 
   // Apply equipped inventory items (with stacking and evolved effects)
+  // s_inv3 (Loadout Master): effects apply twice
+  const effectMult=getSkillEffect('s_inv3')?2:1;
   activeItems.forEach(item=>{
     if(!item.effect)return;
-    const stacks=item.stackCount||1;
+    const stacks=(item.stackCount||1)*effectMult;
     if(item.effect.gold)    state.gold+=item.effect.gold*stacks;
     if(item.effect.perk)    state.perks[item.effect.perk]=true;
     if(item.effect.perk2)   state.perks[item.effect.perk2]=true;
