@@ -621,6 +621,7 @@
         <button class="admin-tab" data-tab="poll">📊 POLL</button>
         <button class="admin-tab" data-tab="game">🎮 GAME</button>
         <button class="admin-tab" data-tab="abuse">😈 ABUSE</button>
+        <button class="admin-tab" data-tab="self">👑 SELF</button>
         <button class="admin-tab" data-tab="log">📋 LOG</button>
       </div>
       <div class="admin-page active" id="admin-page-broadcast">
@@ -715,6 +716,46 @@
         <p class="admin-hint" style="font-size:.65rem;color:#3a3f55;margin-bottom:6px">Show a lightning button for instant panel access — requires password to toggle</p>
         <button class="admin-btn" id="btn-admin-quick-toggle" style="border-color:#f5c842;color:#f5c842">⚡ ENABLE QUICK ACCESS</button>
       </div>
+      <div class="admin-page" id="admin-page-self">
+        <div class="admin-section-label">💎 GEMS</div>
+        <div class="admin-row">
+          <input type="number" id="self-gems-amount" class="admin-input" value="100" min="1" max="99999" style="width:90px"/>
+          <span class="admin-hint">gems</span>
+          <button class="admin-btn gem" id="btn-self-gems">💎 GIVE MYSELF GEMS</button>
+        </div>
+
+        <div class="admin-section-label" style="margin-top:12px">⚡ EXP</div>
+        <div class="admin-row">
+          <input type="number" id="self-exp-amount" class="admin-input" value="500" min="1" max="99999" style="width:90px"/>
+          <span class="admin-hint">exp</span>
+          <button class="admin-btn primary" id="btn-self-exp">⚡ GIVE MYSELF EXP</button>
+        </div>
+
+        <div class="admin-section-label" style="margin-top:12px">🎒 ADD INVENTORY ITEM</div>
+        <div class="admin-row" style="flex-wrap:wrap">
+          <select id="self-item-select" class="admin-select wide"></select>
+          <input type="number" id="self-item-count" class="admin-input" value="1" min="1" max="20" style="width:55px"/>
+          <button class="admin-btn gold" id="btn-self-item">🎒 ADD ITEM</button>
+        </div>
+
+        <div class="admin-section-label" style="margin-top:12px">🌳 UNLOCK SKILL</div>
+        <div class="admin-row">
+          <select id="self-skill-select" class="admin-select wide"></select>
+          <button class="admin-btn" id="btn-self-skill" style="border-color:#4ecca3;color:#4ecca3">🌳 UNLOCK</button>
+        </div>
+        <button class="admin-btn" id="btn-self-unlock-all" style="border-color:#4ecca3;color:#4ecca3;margin-top:6px">🌳 UNLOCK ALL SKILLS</button>
+
+        <div class="admin-section-label" style="margin-top:12px">⚡ QUICK GIVE</div>
+        <div id="admin-self-quick">
+          <button class="admin-quick-btn" id="self-quick-maxgems">💎 MAX GEMS (9999)</button>
+          <button class="admin-quick-btn" id="self-quick-maxexp">⚡ MAX EXP (99999)</button>
+          <button class="admin-quick-btn" id="self-quick-allitems">🎒 ONE OF EVERY ITEM</button>
+          <button class="admin-quick-btn" id="self-quick-reset">🗑 CLEAR INVENTORY</button>
+        </div>
+
+        <div id="admin-self-feedback" style="font-size:.7rem;color:#4ecca3;min-height:18px;margin-top:6px"></div>
+      </div>
+
       <div class="admin-page" id="admin-page-log">
         <div class="admin-section-label">CONNECTION</div>
         <div class="admin-row" style="flex-wrap:wrap;gap:6px">

@@ -2984,6 +2984,7 @@ function _doOpenAdminPanel(){
   void panel.offsetWidth;
   panel.style.animation='';
   populateModifierSelect();
+  populateSelfSelects();
   refreshAdminPollResults();
   adminLog=JSON.parse(localStorage.getItem('mf_admin_log')||'[]');
   renderAdminLog();
@@ -3346,6 +3347,86 @@ document.getElementById('btn-admin-clear-log').addEventListener('click',()=>{
 });
 document.getElementById('btn-admin-test').addEventListener('click',testConnection);
 document.getElementById('btn-admin-claim').addEventListener('click',claimNamespace);
+
+// ── SELF TAB ──────────────────────────────────────────────────
+function selfFeedback(msg){
+  const el=document.getElementById('admin-self-feedback');
+  if(el){el.textContent=msg;setTimeout(()=>{el.textContent='';},3000);}
+}
+
+function populateSelfSelects(){
+  // Item select
+  const itemSel=document.getElementById('self-item-select');
+  itemSel.innerHTML='';
+  GACHA_POOL.forEach(item=>{
+    const opt=document.createElement('option');
+    opt.value=item.id;
+    opt.textContent=`${item.icon} ${item.name} (${item.rarity})`;
+    itemSel.appendChild(opt);
+  });
+  // Skill select
+  const skillSel=document.getElementById('self-skill-select');
+  skillSel.innerHTML='';
+  SKILL_TREE.forEach(skill=>{
+    const opt=document.createElement('option');
+    opt.value=skill.id;
+    opt.textContent=`${skill.icon} ${skill.name}`;
+    skillSel.appendChild(opt);
+  });
+}
+
+document.getElementById('btn-self-gems').addEventListener('click',()=>{
+  const amount=parseInt(document.getElementById('self-gems-amount').value)||100;
+  gems+=amount;saveGems();updateMenuDisplay();
+  selfFeedback(`✓ +${amount} gems added (total: ${gems})`);
+});
+
+document.getElementById('btn-self-exp').addEventListener('click',()=>{
+  const amount=parseInt(document.getElementById('self-exp-amount').value)||500;
+  playerExp+=amount;saveExp();
+  if(document.getElementById('skill-exp-display'))
+    document.getElementById('skill-exp-display').textContent=`⚡ ${playerExp} EXP`;
+  selfFeedback(`✓ +${amount} EXP added (total: ${playerExp})`);
+});
+
+document.getElementById('btn-self-item').addEventListener('click',()=>{
+  const id=document.getElementById('self-item-select').value;
+  const count=parseInt(document.getElementById('self-item-count').value)||1;
+  const item=GACHA_POOL.find(i=>i.id===id);
+  if(!item)return;
+  for(let i=0;i<count;i++) gachaInventory.push({...item});
+  saveGacha();
+  selfFeedback(`✓ Added ${count}× ${item.name} to inventory`);
+});
+
+document.getElementById('btn-self-skill').addEventListener('click',()=>{
+  const id=document.getElementById('self-skill-select').value;
+  if(!unlockedSkills.includes(id)){unlockedSkills.push(id);saveSkills();}
+  const skill=SKILL_TREE.find(s=>s.id===id);
+  selfFeedback(`✓ Unlocked: ${skill?skill.name:id}`);
+});
+
+document.getElementById('btn-self-unlock-all').addEventListener('click',()=>{
+  SKILL_TREE.forEach(s=>{if(!unlockedSkills.includes(s.id))unlockedSkills.push(s.id);});
+  saveSkills();
+  selfFeedback(`✓ All ${SKILL_TREE.length} skills unlocked`);
+});
+
+document.getElementById('self-quick-maxgems').addEventListener('click',()=>{
+  gems=9999;saveGems();updateMenuDisplay();selfFeedback('✓ Gems set to 9999');
+});
+document.getElementById('self-quick-maxexp').addEventListener('click',()=>{
+  playerExp=99999;saveExp();selfFeedback('✓ EXP set to 99999');
+});
+document.getElementById('self-quick-allitems').addEventListener('click',()=>{
+  GACHA_POOL.forEach(item=>gachaInventory.push({...item}));
+  saveGacha();selfFeedback(`✓ Added all ${GACHA_POOL.length} items to inventory`);
+});
+document.getElementById('self-quick-reset').addEventListener('click',()=>{
+  if(!confirm('Clear your entire inventory?'))return;
+  gachaInventory=[];equippedSlots=[null,null,null];saveGacha();saveEquipped();
+  selfFeedback('✓ Inventory cleared');
+});
 
 // Quick access toggle
 document.getElementById('btn-admin-quick-toggle').addEventListener('click',()=>{
