@@ -2195,7 +2195,8 @@ function onReveal(idx){
     if(state.cursedAlways) dmg=2;
     if(state.relics['cursed_eye']&&state.relics['cursed_eye'].downside) dmg=2;
     if(state.relics['glass_cannon']) {state.hp=0;dmg=0;}
-    if(cell.variant==='bounty') dmg=Math.min(state.hp,2);
+    // Bounty mine: -2 HP normally, but only -1 on boss_vault (all mines are bounty there)
+    if(cell.variant==='bounty') dmg=state.modifier&&state.modifier.id==='boss_vault'?1:Math.min(state.hp,2);
     // Volatile modifier: chain all adjacent mines
     if((state.volatileRun||(state.modifier&&state.modifier.id==='volatile'))&&dmg>0){
       const nb=getNeighbors(idx,cols,rows).filter(n=>cells[n].mine&&!cells[n].revealed);
@@ -2335,23 +2336,26 @@ function checkFloorClear(){
   state.gold+=fieldBonus;
 
   // Flag accuracy gold
-  let correct=0,wrong=0,goldBombs=0;
+  let correct=0,wrong=0,goldBombs=0,bountyBombs=0;
   cells.forEach(c=>{
     if(!c.flagged)return;
-    if(c.mine){correct++;if(c.variant==='gold')goldBombs++;}
-    else wrong++;
+    if(c.mine){
+      correct++;
+      if(c.variant==='gold') goldBombs++;
+      if(c.variant==='bounty') bountyBombs++;
+    } else wrong++;
   });
 
   const noCorrectGold=state.relics['mirror']&&state.relics['mirror'].downside;
   const wrongFlagGold=state.relics['mirror']?5:0;
   const goldMod=state.modifier&&state.modifier.id==='goldmine'?2:1;
   const base=10+(state.upgrades['flag_bonus']||0)*4+(state.perks['gold_magnet']?(getSkillEffect('s_combat2')?8:5):0);
-  const regularGold=noCorrectGold?0:(correct-goldBombs)*base*goldMod;
+  const regularGold=noCorrectGold?0:(correct-goldBombs-bountyBombs)*base*goldMod;
   const goldBombGold=noCorrectGold?0:goldBombs*(30+base+(getSkillEffect('s_combat3')?15:0))*goldMod;
+  const bountyBombGold=noCorrectGold?0:bountyBombs*(50+base)*goldMod;
   const wrongGold=wrong*wrongFlagGold;
   const wrongPenalty=(noCorrectGold||getSkillEffect('s_combat4'))?0:wrong*10;
-  // no_gold: earn no gold from flags; run mod mult is halved as penalty (shop still has reduced costs)
-  const goldEarned=state.noGold?0:Math.max(0,regularGold+goldBombGold+wrongGold-wrongPenalty);
+  const goldEarned=state.noGold?0:Math.max(0,regularGold+goldBombGold+bountyBombGold+wrongGold-wrongPenalty);
   state.gold+=goldEarned;
 
   // Gold Finder upgrade: flat bonus per floor cleared
