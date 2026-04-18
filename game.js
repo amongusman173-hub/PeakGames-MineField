@@ -2728,9 +2728,9 @@ function render(){
   const gridEl=document.getElementById('grid');
   gridEl.style.gridTemplateColumns=`repeat(${cols},44px)`;
 
-  // Rebuild grid DOM only when a new floor is loaded (state.gridId changes)
-  if(gridEl.dataset.gridId!==state.gridId){
-    gridEl.dataset.gridId=state.gridId;
+  // Rebuild grid DOM when cell count changes or a new floor is explicitly built
+  if(gridEl.children.length!==cells.length||gridEl.dataset.gridId!==state.gridId){
+    gridEl.dataset.gridId=state.gridId||'';
     gridEl.innerHTML='';
     gridEl.style.transform='';
     for(let i=0;i<cells.length;i++){
@@ -2759,9 +2759,14 @@ function render(){
   const elite=state.modifier&&state.modifier.id==='elite';
   const darkness=(state.modifier&&state.modifier.id==='darkness')||state.lightsAlways;
   const mirrorField=(state.modifier&&state.modifier.id==='mirror')||state.mirrorAlways;
+  const mod=state.modifier;
 
   // Mirror: flip the whole grid via CSS, individual cells counter-flip text
   gridEl.style.transform=mirrorField?'scaleX(-1)':'';
+
+  // Compute revealed set ONCE outside the loop (was O(n²) inside)
+  const revealedSet=new Set();
+  cells.forEach((c,idx)=>{if(c.revealed)revealedSet.add(idx);});
 
   cells.forEach((cell,i)=>{
     const el=gridEl.children[i];  // always use direct index — mirror is CSS-only
@@ -2791,7 +2796,6 @@ function render(){
     })();
 
     // Cursed eye: show mines within 3 tiles of any revealed cell (nerfed — not full map)
-    const revealedSet=new Set(cells.map((_,i)=>i).filter(i=>cells[i].revealed));
     const forceVisible=cell.mine&&(cell._adminVisible||(state.relics['cursed_eye']&&(()=>{
       const{cols,rows}=state.grid;
       const r=Math.floor(i/cols),c=i%cols;
