@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>MINEFIELD</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>"/>
   <link rel="stylesheet" href="style.css"/>
@@ -37,9 +39,12 @@
       <div id="menu-footer">
         <div id="best-score-display"></div>
         <div id="gems-display"></div>
+        <a href="#" id="btn-privacy" class="privacy-link">Privacy Policy</a>
       </div>
     </div>
   </div>
+  <!-- Admin quick-access button (only visible when enabled) -->
+  <button id="btn-admin-quick" class="admin-quick-access-btn" title="Admin Panel" style="display:none">⚡</button>
 
   <!-- SETTINGS SCREEN -->
   <div id="settings-screen" class="screen hidden">
@@ -65,10 +70,10 @@
             <div class="slider-wrap">
               <span class="slider-icon">🎵</span>
               <div class="slider-track-wrap">
-                <input type="range" id="setting-music-vol" class="setting-slider" min="0" max="100" value="70" step="1"/>
+                <input type="range" id="setting-music-vol" class="setting-slider" min="0" max="100" value="25" step="1"/>
                 <div class="slider-fill" id="slider-fill-music"></div>
               </div>
-              <span class="slider-val" id="slider-val-music">70</span>
+              <span class="slider-val" id="slider-val-music">25</span>
             </div>
             <button class="mute-btn" id="btn-mute-music" title="Mute music">🔊</button>
           </div>
@@ -81,10 +86,10 @@
           <div class="slider-wrap">
             <span class="slider-icon">💥</span>
             <div class="slider-track-wrap">
-              <input type="range" id="setting-sfx-vol" class="setting-slider" min="0" max="100" value="80" step="1"/>
+              <input type="range" id="setting-sfx-vol" class="setting-slider" min="0" max="100" value="100" step="1"/>
               <div class="slider-fill" id="slider-fill-sfx"></div>
             </div>
-            <span class="slider-val" id="slider-val-sfx">80</span>
+            <span class="slider-val" id="slider-val-sfx">100</span>
           </div>
         </div>
         <button class="audio-reset-btn" id="btn-audio-reset">↺ RESET TO DEFAULT</button>
@@ -399,6 +404,9 @@
     <div id="message-bar"></div>
     <div id="bomb-legend"></div>
     <div id="consumable-bar"></div>
+    <div id="mobile-flag-bar">
+      <button id="btn-mobile-flag" class="mobile-flag-btn">🚩 FLAG</button>
+    </div>
     <div id="grid-wrap"><div id="grid"></div></div>
   </div>
 
@@ -479,6 +487,236 @@
       <div id="end-buttons">
         <button class="menu-btn primary" id="btn-retry">PLAY AGAIN</button>
         <button class="menu-btn" id="btn-menu">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PASSWORD GATE -->
+  <div id="admin-password-gate" class="hidden" tabindex="0">
+    <div id="pw-box">
+      <div id="pw-title">⚡ ADMIN ACCESS</div>
+      <div id="pw-subtitle">Enter password</div>
+      <div id="pw-dots">
+        <div class="pw-dot"></div>
+        <div class="pw-dot"></div>
+        <div class="pw-dot"></div>
+        <div class="pw-dot"></div>
+        <div class="pw-dot"></div>
+      </div>
+      <div id="pw-error"></div>
+      <div id="pw-keypad">
+        <button class="pw-key" data-val="a">A</button>
+        <button class="pw-key" data-val="b">B</button>
+        <button class="pw-key" data-val="c">C</button>
+        <button class="pw-key" data-val="d">D</button>
+        <button class="pw-key" data-val="e">E</button>
+        <button class="pw-key" data-val="f">F</button>
+        <button class="pw-key" data-val="g">G</button>
+        <button class="pw-key" data-val="h">H</button>
+        <button class="pw-key" data-val="i">I</button>
+        <button class="pw-key" data-val="j">J</button>
+        <button class="pw-key" data-val="k">K</button>
+        <button class="pw-key" data-val="l">L</button>
+        <button class="pw-key" data-val="m">M</button>
+        <button class="pw-key" data-val="n">N</button>
+        <button class="pw-key" data-val="o">O</button>
+        <button class="pw-key" data-val="p">P</button>
+        <button class="pw-key" data-val="q">Q</button>
+        <button class="pw-key" data-val="r">R</button>
+        <button class="pw-key" data-val="s">S</button>
+        <button class="pw-key" data-val="t">T</button>
+        <button class="pw-key" data-val="u">U</button>
+        <button class="pw-key" data-val="v">V</button>
+        <button class="pw-key" data-val="w">W</button>
+        <button class="pw-key" data-val="x">X</button>
+        <button class="pw-key" data-val="y">Y</button>
+        <button class="pw-key" data-val="z">Z</button>
+        <button class="pw-key pw-back" data-val="back">⌫</button>
+        <button class="pw-key pw-enter" data-val="enter">ENTER</button>
+      </div>
+      <button class="pw-cancel" id="btn-pw-cancel">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- PRIVACY POLICY MODAL -->
+  <div id="privacy-overlay" class="hidden">
+    <div id="privacy-box">
+      <div id="privacy-header">
+        <div id="privacy-title">🔒 PRIVACY POLICY</div>
+        <button id="btn-privacy-close">✕</button>
+      </div>
+      <div id="privacy-content">
+        <p class="pp-updated">Last updated: April 2026</p>
+
+        <h3 class="pp-h">1. What We Collect</h3>
+        <p class="pp-p">MINEFIELD is a browser-based game that runs entirely in your browser. We do not collect, store, or transmit any personally identifiable information (PII) to our servers.</p>
+        <p class="pp-p">The following data is stored <strong>locally on your device only</strong> using <code>localStorage</code>:</p>
+        <ul class="pp-list">
+          <li>Game progress (score, gems, EXP, unlocked skills)</li>
+          <li>Inventory items and equipped loadout</li>
+          <li>Settings preferences (volume, VFX, screen shake)</li>
+          <li>Run modifier selections</li>
+          <li>Best score and run count</li>
+        </ul>
+        <p class="pp-p">This data never leaves your device and is not accessible to us.</p>
+
+        <h3 class="pp-h">2. Third-Party Services</h3>
+        <p class="pp-p">MINEFIELD uses <strong>MantleDB</strong> (mantledb.sh) for optional live broadcast features (announcements, polls). If these features are active, anonymous event data may be sent to MantleDB's servers. No personal information is included. Please review <a href="https://mantledb.sh" target="_blank" rel="noopener">MantleDB's privacy policy</a> for details.</p>
+        <p class="pp-p">Google Fonts are loaded from Google's CDN for typography. Google may collect standard request logs. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</p>
+
+        <h3 class="pp-h">3. Cookies</h3>
+        <p class="pp-p">We do not use cookies. All game data is stored in <code>localStorage</code>, which is not transmitted with HTTP requests.</p>
+
+        <h3 class="pp-h">4. Analytics</h3>
+        <p class="pp-p">We do not use any analytics, tracking pixels, or telemetry. No usage data is collected.</p>
+
+        <h3 class="pp-h">5. Children's Privacy</h3>
+        <p class="pp-p">MINEFIELD does not knowingly collect data from children under 13. Since no data is collected at all, the game is safe for all ages.</p>
+
+        <h3 class="pp-h">6. Data Deletion</h3>
+        <p class="pp-p">You can delete all locally stored game data at any time via <strong>Settings → Reset All Progress</strong>, or by clearing your browser's localStorage for this site.</p>
+
+        <h3 class="pp-h">7. Changes</h3>
+        <p class="pp-p">If this policy changes, the "Last updated" date above will be revised. Continued use of the game constitutes acceptance of any updates.</p>
+
+        <h3 class="pp-h">8. Contact</h3>
+        <p class="pp-p">Questions? This is an indie game — reach out via the game's community channels.</p>
+      </div>
+      <button class="menu-btn primary" id="btn-privacy-ok" style="width:160px;margin:0 auto">GOT IT</button>
+    </div>
+  </div>
+
+  <!-- POLL OVERLAY (shown to all players) -->
+  <div id="poll-overlay" class="hidden">
+    <div id="poll-box">
+      <div id="poll-question"></div>
+      <div id="poll-options"></div>
+      <div id="poll-timer"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="admin-overlay" class="hidden">
+    <div id="admin-panel">
+      <div id="admin-header">
+        <div id="admin-title">
+          <span id="admin-title-icon">⚡</span>
+          <span>ADMIN PANEL</span>
+          <span id="admin-status-dot"></span>
+        </div>
+        <button id="admin-close">✕</button>
+      </div>
+      <div id="admin-tabs">
+        <button class="admin-tab active" data-tab="broadcast">📢 BROADCAST</button>
+        <button class="admin-tab" data-tab="poll">📊 POLL</button>
+        <button class="admin-tab" data-tab="game">🎮 GAME</button>
+        <button class="admin-tab" data-tab="abuse">😈 ABUSE</button>
+        <button class="admin-tab" data-tab="log">📋 LOG</button>
+      </div>
+      <div class="admin-page active" id="admin-page-broadcast">
+        <div class="admin-section-label">LIVE ANNOUNCEMENT</div>
+        <textarea id="admin-announce-text" class="admin-textarea" placeholder="Type your announcement..."></textarea>
+        <div class="admin-row">
+          <select id="admin-announce-style" class="admin-select">
+            <option value="info">ℹ️ Info</option>
+            <option value="warning">⚠️ Warning</option>
+            <option value="success">✅ Success</option>
+            <option value="danger">🚨 Alert</option>
+            <option value="gold">💰 Gold</option>
+          </select>
+          <input type="number" id="admin-announce-duration" class="admin-input" value="8" min="2" max="60" style="width:70px"/>
+          <span class="admin-hint">sec</span>
+          <button class="admin-btn primary" id="btn-admin-announce">SEND</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:12px">QUICK MESSAGES</div>
+        <div id="admin-quick-msgs">
+          <button class="admin-quick-btn" data-msg="🔧 Server maintenance in 5 minutes. Finish your run!">⚠️ Maintenance</button>
+          <button class="admin-quick-btn" data-msg="🎉 Double gems event is now LIVE for the next hour!">🎉 Double Gems</button>
+          <button class="admin-quick-btn" data-msg="🏆 New high score just set! Can you beat it?">🏆 New Record</button>
+          <button class="admin-quick-btn" data-msg="💣 MINEFIELD v1.3 is now live — check the changelog!">🆕 Update</button>
+          <button class="admin-quick-btn" data-msg="👀 The admin is watching you...">👀 Watching</button>
+          <button class="admin-quick-btn" data-msg="🎰 BONUS FLOOR event: all floors are Bonus Floors for the next 10 minutes!">⭐ Bonus Event</button>
+        </div>
+      </div>
+      <div class="admin-page" id="admin-page-poll">
+        <div class="admin-section-label">CREATE POLL</div>
+        <input type="text" id="admin-poll-q" class="admin-input wide" placeholder="Poll question..."/>
+        <div id="admin-poll-options">
+          <input type="text" class="admin-input wide admin-poll-opt" placeholder="Option A"/>
+          <input type="text" class="admin-input wide admin-poll-opt" placeholder="Option B"/>
+          <input type="text" class="admin-input wide admin-poll-opt" placeholder="Option C (optional)"/>
+          <input type="text" class="admin-input wide admin-poll-opt" placeholder="Option D (optional)"/>
+        </div>
+        <div class="admin-row">
+          <input type="number" id="admin-poll-duration" class="admin-input" value="60" min="10" max="300" style="width:70px"/>
+          <span class="admin-hint">sec</span>
+          <button class="admin-btn primary" id="btn-admin-poll">LAUNCH POLL</button>
+          <button class="admin-btn" id="btn-admin-poll-end">END POLL</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:12px">LIVE RESULTS</div>
+        <div id="admin-poll-results"></div>
+      </div>
+      <div class="admin-page" id="admin-page-game">
+        <div class="admin-section-label">FORCE FLOOR MODIFIER</div>
+        <div class="admin-row">
+          <select id="admin-modifier-select" class="admin-select wide"></select>
+          <button class="admin-btn primary" id="btn-admin-modifier">FORCE ON NEXT FLOOR</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:12px">GIVE EVERYONE GOLD</div>
+        <div class="admin-row">
+          <input type="number" id="admin-gold-amount" class="admin-input" value="100" min="1" max="9999" style="width:90px"/>
+          <span class="admin-hint">gold</span>
+          <button class="admin-btn gold" id="btn-admin-gold">💰 GIVE GOLD</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:12px">GIVE EVERYONE GEMS</div>
+        <div class="admin-row">
+          <input type="number" id="admin-gems-amount" class="admin-input" value="50" min="1" max="9999" style="width:90px"/>
+          <span class="admin-hint">gems</span>
+          <button class="admin-btn gem" id="btn-admin-gems">💎 GIVE GEMS</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:12px">REFRESH / UPDATE</div>
+        <div class="admin-row">
+          <input type="number" id="admin-refresh-delay" class="admin-input" value="5" min="0" max="60" style="width:70px"/>
+          <span class="admin-hint">sec delay</span>
+          <button class="admin-btn danger" id="btn-admin-refresh">🔄 FORCE REFRESH</button>
+        </div>
+      </div>
+      <div class="admin-page" id="admin-page-abuse">
+        <div class="admin-section-label">😈 ADMIN ABUSE</div>
+        <div id="admin-abuse-grid">
+          <button class="admin-abuse-btn" id="btn-abuse-explode">💥 EXPLODE EVERYONE</button>
+          <button class="admin-abuse-btn" id="btn-abuse-shake">📳 MASS SHAKE</button>
+          <button class="admin-abuse-btn" id="btn-abuse-darkness">🌑 LIGHTS OUT ALL</button>
+          <button class="admin-abuse-btn" id="btn-abuse-bonus">⭐ BONUS FLOOR ALL</button>
+          <button class="admin-abuse-btn" id="btn-abuse-chaos">🎲 CHAOS MODE</button>
+          <button class="admin-abuse-btn" id="btn-abuse-mines">💣 DOUBLE MINES</button>
+          <button class="admin-abuse-btn" id="btn-abuse-heal">💚 HEAL EVERYONE</button>
+          <button class="admin-abuse-btn" id="btn-abuse-fullheal">❤️ FULL HEAL ALL</button>
+          <button class="admin-abuse-btn" id="btn-abuse-shield">🛡️ SHIELD ALL</button>
+          <button class="admin-abuse-btn" id="btn-abuse-gems2x">💎 2X GEMS (5min)</button>
+          <button class="admin-abuse-btn" id="btn-abuse-score2x">📊 2X SCORE (floor)</button>
+          <button class="admin-abuse-btn" id="btn-abuse-freeze">🧊 FREEZE FLAGS</button>
+          <button class="admin-abuse-btn danger" id="btn-abuse-kill">☠️ KILL ALL RUNS</button>
+          <button class="admin-abuse-btn danger" id="btn-abuse-drain">💸 DRAIN GOLD</button>
+        </div>
+        <div class="admin-section-label" style="margin-top:14px">⚡ QUICK ACCESS</div>
+        <p class="admin-hint" style="font-size:.65rem;color:#3a3f55;margin-bottom:6px">Show a lightning button for instant panel access — requires password to toggle</p>
+        <button class="admin-btn" id="btn-admin-quick-toggle" style="border-color:#f5c842;color:#f5c842">⚡ ENABLE QUICK ACCESS</button>
+      </div>
+      <div class="admin-page" id="admin-page-log">
+        <div class="admin-section-label">CONNECTION</div>
+        <div class="admin-row" style="flex-wrap:wrap;gap:6px">
+          <button class="admin-btn primary" id="btn-admin-test">🔌 TEST CONNECTION</button>
+          <button class="admin-btn" id="btn-admin-claim">🔑 CLAIM NAMESPACE</button>
+        </div>
+        <div class="admin-hint" style="font-size:.62rem;color:#3a3f55;margin-top:4px">If broadcasts aren't reaching other players, claim the namespace first. Key goes in MANTLE_KEY in game.js.</div>
+        <div class="admin-section-label" style="margin-top:12px">BROADCAST LOG</div>
+        <div id="admin-log-list"></div>
+        <button class="admin-btn" id="btn-admin-clear-log" style="margin-top:8px">🗑 CLEAR LOG</button>
+      </div>
+      <div id="admin-footer">
+        <span id="admin-poll-count">Polling every 3s</span>
+        <span id="admin-last-seen"></span>
       </div>
     </div>
   </div>
