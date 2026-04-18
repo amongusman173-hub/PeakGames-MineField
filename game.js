@@ -145,7 +145,7 @@ const PERKS=[
 // ── Cursed Relics ─────────────────────────────────────────────
 const RELICS=[
   {id:'blood_pact',  icon:'🩸', name:'BLOOD PACT',    desc:'+100 gold per floor.',            curse:'Max HP reduced to 2.',              cost:30,  effect:{goldPerFloor:100},  downside:{maxHp:2}},
-  {id:'cursed_eye',  icon:'👁',  name:'CURSED EYE',    desc:'See all mine positions.',         curse:'Mine hits deal 2 HP.',              cost:45,  effect:{seeAll:true},       downside:{doubleDmg:true}},
+  {id:'cursed_eye',  icon:'👁',  name:'CURSED EYE',    desc:'Mines within 3 tiles of revealed cells glow faintly.',  curse:'Mine hits deal 2 HP. Extremely rare.',  cost:180, effect:{seeAll:true}, downside:{doubleDmg:true}, rare:true},
   {id:'glass_cannon',icon:'💎', name:'GLASS CANNON',  desc:'Score x3 multiplier.',            curse:'Die on any mine hit.',              cost:15,  effect:{scoreMult:3},       downside:{oneHit:true}},
   {id:'debt',        icon:'💳', name:'DEBT CONTRACT', desc:'Start with +200 gold.',           curse:'-20 gold per floor.',               cost:0,   effect:{startGold:200},     downside:{goldDrain:20}},
   {id:'mirror',      icon:'🪞', name:'MIRROR CURSE',  desc:'Wrong flags give +5 gold.',       curse:'Correct flags give no gold.',       cost:10,  effect:{wrongFlagGold:5},   downside:{noCorrectGold:true}},
@@ -2074,8 +2074,7 @@ function buildFloor(){
   // Elite always run mod
   const eliteAlwaysMod=state.eliteAlways;
 
-  // Cursed eye relic: reveal all mines visually
-  if(state.relics['cursed_eye']) cells.forEach(c=>{if(c.mine)c._visible=true;});
+  // Cursed eye relic: mines near revealed cells shown dynamically in render()
 
   floodReveal(0);
   updateBombLegend();
@@ -2423,7 +2422,7 @@ function openShop(){
 
   const extra=skillShopExtra();
   buildShopSection('shop-perks',    pickRandom(PERKS,6+extra),       'perk-card',    buildPerkCard);
-  buildShopSection('shop-relics',   pickRandom(RELICS,3),            'relic-card',   buildRelicCard);
+  buildShopSection('shop-relics', pickRandomRelics(3), 'relic-card', buildRelicCard);
   buildShopSection('shop-oneuse',   pickRandom(CONSUMABLES,6+extra), 'use-card',     buildUseCard);
   buildShopSection('shop-upgrades', pickRandom(UPGRADES,6+extra),    'upgrade-card', buildUpgradeCard);
 
@@ -2431,6 +2430,12 @@ function openShop(){
 }
 
 function pickRandom(arr,n){return arr.slice().sort(()=>Math.random()-.5).slice(0,n);}
+
+// Relics: rare:true items only appear ~20% of the time
+function pickRandomRelics(n){
+  const pool=RELICS.filter(r=>!r.rare||Math.random()<0.20);
+  return pool.slice().sort(()=>Math.random()-.5).slice(0,n);
+}
 
 function buildShopSection(id,items,cls,builder){
   const c=document.getElementById(id);c.innerHTML='';
@@ -2765,8 +2770,17 @@ function render(){
       return Math.hypot(mouseX-cx,mouseY-cy);
     })();
 
-    // Cursed eye: show mine positions
-    const forceVisible=cell._visible||state.relics['cursed_eye'];
+    // Cursed eye: show mines within 3 tiles of any revealed cell (nerfed — not full map)
+    const revealedSet=new Set(cells.map((_,i)=>i).filter(i=>cells[i].revealed));
+    const forceVisible=cell.mine&&(cell._adminVisible||(state.relics['cursed_eye']&&(()=>{
+      const{cols,rows}=state.grid;
+      const r=Math.floor(i/cols),c=i%cols;
+      for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&revealedSet.has(nr*cols+nc))return true;
+      }
+      return false;
+    })()));
 
     if(darknessHidden){
       el.classList.add('hidden');el.style.opacity='0';el.style.pointerEvents='none';
@@ -2790,6 +2804,10 @@ function render(){
       else if(state.perks['detector']&&!cell.mine){
         const mc=getNeighbors(i,cols,state.grid.rows).filter(n=>cells[n].mine).length;
         if(mc>=3){el.style.boxShadow='inset 0 0 8px #e9456044';el.style.borderColor='#e9456033';}
+      }
+      // Admin: highlight safe tiles green
+      if(state._highlightSafe&&!cell.mine&&!cell.flagged){
+        el.style.boxShadow='inset 0 0 10px #4ecca366';el.style.borderColor='#4ecca344';
       }
       if(cell.mine&&cell.variant==='bounty'&&!ghostHidden&&!eliteHidden&&mod&&mod.id!=='boss_vault') el.classList.add('bounty');
     } else if(cell.mine){
@@ -3293,6 +3311,12 @@ document.getElementById('btn-abuse-score2x').addEventListener('click',async()=>{
 document.getElementById('btn-abuse-freeze').addEventListener('click',async()=>{
   await sendBroadcast({type:'abuse',action:'freeze_flags'});
 });
+document.getElementById('btn-abuse-reveal-bombs').addEventListener('click',async()=>{
+  await sendBroadcast({type:'abuse',action:'reveal_bombs'});
+});
+document.getElementById('btn-abuse-highlight-safe').addEventListener('click',async()=>{
+  await sendBroadcast({type:'abuse',action:'highlight_safe'});
+});
 document.getElementById('btn-abuse-drain').addEventListener('click',async()=>{
   if(!confirm('Drain everyone\'s gold to 0?'))return;
   await sendBroadcast({type:'abuse',action:'drain_gold'});
@@ -3438,6 +3462,29 @@ function handleAbuse(data){
         if(document.getElementById('hud-gold'))
           document.getElementById('hud-gold').textContent='💰 0';
         showAnnouncement('💸 Admin drained your gold. Ouch.','danger','💸',5);
+      }
+      break;
+    case 'reveal_bombs':
+      if(state&&state.grid&&!state.dead){
+        state.grid.cells.forEach(c=>{if(c.mine)c._adminVisible=true;});
+        render();
+        showAnnouncement('💣 Admin revealed all bomb positions!','warning','💣',8);
+        // Auto-hide after 8s
+        setTimeout(()=>{
+          if(state&&state.grid) state.grid.cells.forEach(c=>{c._adminVisible=false;});
+          if(!state.dead) render();
+        },8000);
+      }
+      break;
+    case 'highlight_safe':
+      if(state&&state.grid&&!state.dead){
+        state._highlightSafe=true;
+        render();
+        showAnnouncement('✅ Admin highlighted all safe tiles for 6 seconds!','success','✅',6);
+        setTimeout(()=>{
+          state._highlightSafe=false;
+          if(!state.dead) render();
+        },6000);
       }
       break;
   }
