@@ -2862,36 +2862,55 @@ function flashMessage(text,color='#f5a623'){
 const MANTLE_NS   = 'minefield-game-admin-2024';
 const MANTLE_BASE = 'https://mantledb.sh/v2';
 const MANTLE_KEY  = '14e998e2f49eff827ff0038869ba01adb583aa044019bd453950c7a5c911ef9b';
+const BROADCAST_URL = `${MANTLE_BASE}/${MANTLE_NS}/broadcast`;
 
-async function mantleGet(path){
+// ── Write broadcast (admin only) ─────────────────────────────
+async function writeBroadcast(data){
   try{
-    const r=await fetch(`${MANTLE_BASE}/${MANTLE_NS}/${path}`,{
-      cache:'no-store'
-      // no key needed — public_read entries are readable by anyone
+    const r=await fetch(BROADCAST_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Mantle-Key':MANTLE_KEY},
+      body:JSON.stringify({...data, ts:Date.now()})
     });
+    const res=await r.json();
+    // Auto-reset after 15s so new visitors don't see stale commands
+    setTimeout(()=>{
+      fetch(BROADCAST_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Mantle-Key':MANTLE_KEY},
+        body:JSON.stringify({ts:0,type:'none'})
+      }).catch(()=>{});
+    },15000);
+    return res;
+  }catch(e){return{error:e.message};}
+}
+
+// ── Read broadcast (all clients) ─────────────────────────────
+async function readBroadcast(){
+  try{
+    const r=await fetch(BROADCAST_URL,{cache:'no-store'});
     if(!r.ok)return null;
     return await r.json();
   }catch{return null;}
 }
+
+// mantlePost still used for poll votes
 async function mantlePost(path,data){
   try{
     const r=await fetch(`${MANTLE_BASE}/${MANTLE_NS}/${path}`,{
       method:'POST',
-      headers:{'Content-Type':'application/json',...(MANTLE_KEY?{'X-Mantle-Key':MANTLE_KEY}:{})},
+      headers:{'Content-Type':'application/json','X-Mantle-Key':MANTLE_KEY},
       body:JSON.stringify(data)
     });
     return await r.json();
   }catch(e){return{error:e.message};}
 }
-async function mantlePatch(path,data){
+async function mantleGet(path){
   try{
-    const r=await fetch(`${MANTLE_BASE}/${MANTLE_NS}/${path}`,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json',...(MANTLE_KEY?{'X-Mantle-Key':MANTLE_KEY}:{})},
-      body:JSON.stringify(data)
-    });
+    const r=await fetch(`${MANTLE_BASE}/${MANTLE_NS}/${path}`,{cache:'no-store'});
+    if(!r.ok)return null;
     return await r.json();
-  }catch(e){return{error:e.message};}
+  }catch{return null;}
 }
 
 // ── Admin trigger — Konami code: ↑↑↓↓←→←→BA Enter ──────────
@@ -3120,8 +3139,7 @@ function renderAdminLog(){
 }
 
 async function sendBroadcast(payload){
-  payload.ts=Date.now();
-  const res=await mantlePost('broadcast',payload);
+  const res=await writeBroadcast(payload);
   const footer=document.getElementById('admin-last-seen');
   if(res&&res.success){
     adminLogEntry(`✓ [${payload.type}] ${JSON.stringify(payload).slice(0,80)}`);
@@ -3130,8 +3148,7 @@ async function sendBroadcast(payload){
     const errMsg=res?.error||res?.message||JSON.stringify(res)||'network error';
     adminLogEntry(`❌ [${payload.type}] ${errMsg}`);
     if(footer) footer.textContent='❌ Failed: '+errMsg;
-    // Show in panel
-    showAnnouncement(`Admin send failed: ${errMsg}`,'danger','❌',5);
+    showAnnouncement(`Send failed: ${errMsg}`,'danger','❌',5);
   }
   return res;
 }
@@ -3152,7 +3169,7 @@ async function claimNamespace(){
 async function testConnection(){
   const footer=document.getElementById('admin-last-seen');
   if(footer) footer.textContent='Testing...';
-  const res=await mantlePost('broadcast',{type:'ping',ts:Date.now(),msg:'connection test'});
+  const res=await writeBroadcast({type:'ping',msg:'🔌 Connection test from admin'});
   if(res&&res.success){
     if(footer) footer.textContent='✓ Connected '+new Date().toLocaleTimeString();
     adminLogEntry('✓ Connection test passed');
@@ -3305,31 +3322,35 @@ document.getElementById('btn-admin-quick').addEventListener('click',()=>{
 let lastBroadcastTs=0;
 let forcedNextModifier=null;
 let gems2xActive=false;
-let playerPollVote=null; // option the player voted for
+let playerPollVote=null;
 
 async function pollBroadcast(){
-  const data=await mantleGet('broadcast');
-  if(!data||!data.ts||data.ts<=lastBroadcastTs)return;
+  const data=await readBroadcast();
+  // Ignore if null, no ts, ts=0 (reset), or already seen
+  if(!data||!data.ts||data.ts===0||data.ts<=lastBroadcastTs)return;
   lastBroadcastTs=data.ts;
+
+  // Route based on type or shorthand fields (following the guide pattern)
+  if(data.msg) showAnnouncement(data.msg, data.style||'info', data.icon||'ℹ️', data.duration||8);
+  if(data.refresh) setTimeout(()=>location.reload(), (data.delay||3)*1000);
 
   switch(data.type){
     case 'announcement':
-      showAnnouncement(data.text,data.style||'info',data.icon||'ℹ️',data.duration||8);
+      showAnnouncement(data.text||data.msg, data.style||'info', data.icon||'ℹ️', data.duration||8);
       break;
     case 'poll':
-      showPoll(data.question,data.options,data.endsAt,data.duration);
+      showPoll(data.question, data.options, data.endsAt, data.duration);
       break;
     case 'poll_end':
       hidePoll();
       break;
     case 'force_modifier':
       forcedNextModifier=data.modifierId;
-      showAnnouncement(`⚡ Admin forced next floor: ${data.modifierId.toUpperCase().replace('_',' ')}!`,'warning','⚡',6);
+      showAnnouncement(`⚡ Next floor: ${data.modifierId.toUpperCase().replace(/_/g,' ')}!`,'warning','⚡',6);
       break;
     case 'give_gold':
-      if(state&&state.gold!==undefined){
+      if(state&&state.gold!==undefined&&!state.dead){
         state.gold+=data.amount;
-        flashMessage(`💰 ADMIN GIFT: +${data.amount} gold!`,'#f5c842');
         if(document.getElementById('hud-gold'))
           document.getElementById('hud-gold').textContent=`💰 ${state.gold}`;
       }
@@ -3340,8 +3361,8 @@ async function pollBroadcast(){
       showAnnouncement(`💎 Admin gave everyone +${data.amount} gems!`,'success','💎',6);
       break;
     case 'refresh':
-      showAnnouncement(`🔄 Game update incoming in ${data.delay}s — refreshing...`,'warning','🔄',data.delay);
-      setTimeout(()=>location.reload(),data.delay*1000);
+      showAnnouncement(`🔄 Refreshing in ${data.delay||3}s...`,'warning','🔄',data.delay||3);
+      setTimeout(()=>location.reload(),(data.delay||3)*1000);
       break;
     case 'abuse':
       handleAbuse(data);
@@ -3439,7 +3460,6 @@ function showAnnouncement(text,style,icon,duration){
   document.getElementById('announce-text').textContent=text;
   box.className=`style-${style}`;
   overlay.classList.remove('hidden');
-  // Progress bar
   fill.style.transition='none';fill.style.width='100%';
   requestAnimationFrame(()=>{
     fill.style.transition=`width ${duration}s linear`;
@@ -3448,6 +3468,11 @@ function showAnnouncement(text,style,icon,duration){
   clearTimeout(announceTimer);
   announceTimer=setTimeout(()=>overlay.classList.add('hidden'),duration*1000);
 }
+// Close announcement on click
+document.getElementById('announce-overlay').addEventListener('click',()=>{
+  clearTimeout(announceTimer);
+  document.getElementById('announce-overlay').classList.add('hidden');
+});
 
 // ── Poll UI ───────────────────────────────────────────────────
 let pollTimerInterval=null;
