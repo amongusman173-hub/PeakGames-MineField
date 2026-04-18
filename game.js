@@ -71,12 +71,8 @@ function skillMaxHp(){
   return bonus;
 }
 function skillMaxInventory(){
-  let cap=12;
-  if(getSkillEffect('s_inv1')) cap+=2;
-  if(getSkillEffect('s_inv2')) cap+=4;
-  if(getSkillEffect('s_inv3')) cap+=6;
-  if(getSkillEffect('s_inv4')) cap+=10;
-  return cap;
+  // Hard cap at 100 regardless of skill tree
+  return 100;
 }
 function skillEquipSlots(){return getSkillEffect('s_slots1')?4:3;}
 function skillShopExtra(){return getSkillEffect('s_shop1')?1:0;}
@@ -121,7 +117,7 @@ const FLOOR_MODIFIERS=[
 const BOSS_MODIFIERS=[
   {id:'boss_titan',   icon:'💥', name:'TITAN FIELD',    color:'#ff4466', desc:'50% more mines. Mine hits deal 2 HP. Clear for +300 score bonus.',  isBoss:true},
   {id:'boss_phantom', icon:'👁️',name:'PHANTOM FIELD',  color:'#b07aff', desc:'All mines are Ghost type. No numbers shown.',                       isBoss:true},
-  {id:'boss_vault',   icon:'🏆', name:'BOUNTY VAULT',    color:'#f5c842', desc:'All mines are Bounty type. Flag them all for massive gold.',         isBoss:true},
+  {id:'boss_vault',   icon:'🏆', name:'BOUNTY VAULT',    color:'#f5c842', desc:'All mines are Bounty type. Flag every mine for massive gold. Clicking a mine costs 1 HP.',  isBoss:true},
   {id:'boss_chain',   icon:'🔗', name:'CHAIN REACTION', color:'#ff7043', desc:'All mines are Chain type. One wrong move cascades.',                 isBoss:true},
   {id:'boss_clock',   icon:'⏰', name:'SPEED TRIAL',    color:'#f5a623', desc:'60 second timer. Every correct flag adds +5 seconds.',               isBoss:true},
 ];
@@ -1694,7 +1690,7 @@ function doGachaRoll(count){
   const totalTime=results.length*220+700;
   setTimeout(()=>{
     results.forEach(item=>{
-      if(gachaInventory.length<skillMaxInventory()) gachaInventory.push(item);
+      gachaInventory.push(item);
     });
     saveGacha();renderGachaInventory();
     document.getElementById('gacha-result').innerHTML=results.map(r=>`
@@ -2810,6 +2806,11 @@ function render(){
         el.style.boxShadow='inset 0 0 10px #4ecca366';el.style.borderColor='#4ecca344';
       }
       if(cell.mine&&cell.variant==='bounty'&&!ghostHidden&&!eliteHidden&&mod&&mod.id!=='boss_vault') el.classList.add('bounty');
+      // boss_vault: all tiles are mines — show subtle gold tint so board isn't blank
+      if(mod&&mod.id==='boss_vault'&&cell.mine&&!ghostHidden&&!eliteHidden){
+        el.style.borderColor='rgba(245,200,66,0.25)';
+        el.style.boxShadow='inset 0 0 6px rgba(245,200,66,0.12)';
+      }
     } else if(cell.mine){
       el.classList.add(state.dead?'mine-dead':'mine-explode');
       const vDef=cell.variant?BOMB_VARIANTS.find(v=>v.id===cell.variant):null;
@@ -3507,10 +3508,10 @@ function showPoll(question,options,endsAt,duration){
         btn.addEventListener('click',async()=>{
           if(playerPollVote)return;
           playerPollVote=btn.dataset.opt;
-          // Atomic increment via MantleDB
+          // Atomic increment via MantleDB — needs write key
           await fetch(`${MANTLE_BASE}/increment/${MANTLE_NS}/poll/votes`,{
             method:'POST',
-            headers:{'Content-Type':'application/json'},
+            headers:{'Content-Type':'application/json','X-Mantle-Key':MANTLE_KEY},
             body:JSON.stringify({key:playerPollVote,by:1})
           }).catch(()=>{});
           // Re-fetch and re-render with results
