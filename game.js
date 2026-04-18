@@ -3550,30 +3550,46 @@ function handleAbuse(data){
 const _origCheckFloorClear=checkFloorClear;
 // (gems2x is applied inline — we patch the gem gain in the earn section via flag)
 
-// ── Announcement UI ───────────────────────────────────────────
-let announceTimer=null;
+// ── Announcement UI — stacking toasts ────────────────────────
 function showAnnouncement(text,style,icon,duration){
-  const overlay=document.getElementById('announce-overlay');
-  const box=document.getElementById('announce-box');
-  const fill=document.getElementById('announce-bar-fill');
-  document.getElementById('announce-icon').textContent=icon;
-  document.getElementById('announce-text').textContent=text;
-  box.className=`style-${style}`;
-  overlay.classList.remove('hidden');
-  // Reset bar — remove transition, force reflow, then animate
+  const container=document.getElementById('announce-overlay');
+  container.classList.remove('hidden');
+
+  const toast=document.createElement('div');
+  toast.className=`announce-toast style-${style}`;
+  toast.innerHTML=`
+    <button class="announce-close">✕</button>
+    <div class="announce-icon">${icon}</div>
+    <div class="announce-text">${text}</div>
+    <div class="announce-bar"><div class="announce-bar-fill"></div></div>`;
+
+  container.appendChild(toast);
+
+  // Animate bar
+  const fill=toast.querySelector('.announce-bar-fill');
   fill.style.transition='none';
   fill.style.width='100%';
-  fill.getBoundingClientRect(); // force reflow so browser registers the reset
+  fill.getBoundingClientRect();
   fill.style.transition=`width ${duration}s linear`;
   fill.style.width='0%';
-  clearTimeout(announceTimer);
-  announceTimer=setTimeout(()=>overlay.classList.add('hidden'),duration*1000);
+
+  // Close on click
+  const dismiss=()=>{
+    toast.classList.add('announce-toast-out');
+    setTimeout(()=>{
+      toast.remove();
+      if(!container.children.length) container.classList.add('hidden');
+    },280);
+  };
+  toast.addEventListener('click',dismiss);
+  toast.querySelector('.announce-close').addEventListener('click',e=>{e.stopPropagation();dismiss();});
+
+  // Auto-dismiss
+  setTimeout(dismiss, duration*1000);
 }
-// Close announcement on click
-document.getElementById('announce-overlay').addEventListener('click',()=>{
-  clearTimeout(announceTimer);
-  document.getElementById('announce-overlay').classList.add('hidden');
-});
+
+// Close announcement on click (legacy — now handled per-toast)
+document.getElementById('announce-overlay').addEventListener('click',()=>{});
 
 // ── Poll UI ───────────────────────────────────────────────────
 let pollTimerInterval=null;

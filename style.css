@@ -943,32 +943,48 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   font-size:.6rem;color:#3a3f55;letter-spacing:.06em;
 }
 
-/* ── Announcement overlay (shown to all players) ── */
+/* ── Announcement overlay — stacking toasts ── */
 #announce-overlay{
-  position:fixed;top:20px;left:50%;transform:translateX(-50%);
-  z-index:800;pointer-events:auto;cursor:pointer;
+  position:fixed;top:20px;right:20px;
+  z-index:800;pointer-events:none;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end;
+  max-width:min(360px,90vw);
 }
-#announce-overlay.hidden{display:none}
-#announce-box{
+@keyframes toast-in{
+  from{opacity:0;transform:translateX(20px) scale(.96);}
+  to  {opacity:1;transform:translateX(0) scale(1);}
+}
+@keyframes toast-out{
+  from{opacity:1;transform:translateX(0) scale(1);max-height:200px;margin-bottom:0}
+  to  {opacity:0;transform:translateX(20px) scale(.94);max-height:0;margin-bottom:-8px}
+}
+.announce-toast{
   background:rgba(13,15,22,.97);border-radius:12px;
-  padding:14px 22px;min-width:280px;max-width:min(500px,90vw);
-  display:flex;flex-direction:column;gap:8px;
-  box-shadow:0 4px 32px #00000088;
-  animation:announce-drop .4s cubic-bezier(.34,1.56,.64,1) forwards;
+  padding:12px 34px 10px 14px;width:100%;
+  display:flex;flex-direction:column;gap:6px;position:relative;
+  box-shadow:0 4px 24px #00000088;cursor:pointer;pointer-events:auto;
+  animation:toast-in .3s cubic-bezier(.22,1,.36,1) forwards;
 }
-@keyframes announce-drop{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
-#announce-box.style-info   {border:1px solid #4ecca3;box-shadow:0 4px 32px #4ecca322}
-#announce-box.style-warning{border:1px solid #f5a623;box-shadow:0 4px 32px #f5a62322}
-#announce-box.style-success{border:1px solid #4ecca3;box-shadow:0 4px 32px #4ecca322}
-#announce-box.style-danger {border:1px solid #e94560;box-shadow:0 4px 32px #e9456033}
-#announce-box.style-gold   {border:1px solid #f5c842;box-shadow:0 4px 32px #f5c84233}
-#announce-icon{font-size:1.2rem;text-align:center}
-#announce-text{
-  font-family:'Share Tech Mono',monospace;font-size:.85rem;color:#c8cfe0;
-  text-align:center;line-height:1.5;
+.announce-toast.announce-toast-out{animation:toast-out .28s ease-in forwards}
+.announce-toast.style-info   {border:1px solid #4ecca3}
+.announce-toast.style-warning{border:1px solid #f5a623}
+.announce-toast.style-success{border:1px solid #4ecca3}
+.announce-toast.style-danger {border:1px solid #e94560}
+.announce-toast.style-gold   {border:1px solid #f5c842}
+.announce-icon{font-size:1rem}
+.announce-text{font-family:'Share Tech Mono',monospace;font-size:.8rem;color:#c8cfe0;line-height:1.5}
+.announce-bar{height:3px;background:#1f2535;border-radius:2px;overflow:hidden}
+.announce-bar-fill{height:100%;background:#e94560;border-radius:2px;width:100%}
+.announce-toast.style-info    .announce-bar-fill,
+.announce-toast.style-success .announce-bar-fill{background:#4ecca3}
+.announce-toast.style-warning .announce-bar-fill{background:#f5a623}
+.announce-toast.style-gold    .announce-bar-fill{background:#f5c842}
+.announce-close{
+  position:absolute;top:7px;right:9px;
+  background:transparent;border:none;color:rgba(255,255,255,.3);
+  font-size:.7rem;cursor:pointer;line-height:1;padding:2px 4px;transition:color .15s;
 }
-#announce-bar{height:3px;background:#1f2535;border-radius:2px;overflow:hidden}
-#announce-bar-fill{height:100%;background:#e94560;border-radius:2px;width:100%;transition:width linear}
+.announce-close:hover{color:#fff}
 
 /* ── Poll overlay ── */
 #poll-overlay{
@@ -1196,12 +1212,4 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 /* ── Password gate: hide cancel when mode is 'open' ── */
 #admin-password-gate[data-mode="open"] .pw-cancel{opacity:0;pointer-events:none}
 
-/* ── Announcement close button ── */
-#announce-box{position:relative}
-#announce-close{
-  position:absolute;top:8px;right:10px;
-  background:transparent;border:none;color:rgba(255,255,255,.4);
-  font-size:.75rem;cursor:pointer;line-height:1;padding:2px 4px;
-  transition:color .15s;
-}
-#announce-close:hover{color:#fff}
+/* (announce close button styles now in .announce-close above) */
