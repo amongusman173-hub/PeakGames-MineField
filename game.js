@@ -2706,9 +2706,12 @@ function render(){
   const gridEl=document.getElementById('grid');
   gridEl.style.gridTemplateColumns=`repeat(${cols},44px)`;
 
-  if(gridEl.children.length!==cells.length){
+  // Always rebuild grid when floor changes or cell count differs
+  const floorKey=`${state.floor}-${cells.length}`;
+  if(gridEl.dataset.floorKey!==floorKey){
+    gridEl.dataset.floorKey=floorKey;
     gridEl.innerHTML='';
-    gridEl.style.transform=''; // reset mirror on rebuild
+    gridEl.style.transform='';
     for(let i=0;i<cells.length;i++){
       const el=document.createElement('div');el.className='cell';
       el.addEventListener('click',()=>onReveal(i));
@@ -2742,7 +2745,7 @@ function render(){
   cells.forEach((cell,i)=>{
     const el=gridEl.children[i];  // always use direct index — mirror is CSS-only
     if(!el)return;
-    el.className='cell';el.textContent='';el.style.color='';el.style.fontSize='';el.style.opacity='';el.style.boxShadow='';el.style.pointerEvents='';
+    el.className='cell';el.textContent='';el.style.color='';el.style.fontSize='';el.style.opacity='';el.style.boxShadow='';el.style.pointerEvents='';el.style.borderColor='';el.style.background='';
     if(mirrorField) el.style.transform='scaleX(-1)';
     else el.style.transform='';
 
@@ -3386,11 +3389,12 @@ function handleAbuse(data){
       showAnnouncement(`💎 2× GEMS active for ${Math.round((data.duration||300)/60)} minutes!`,'success','💎',6);
       break;
     case 'heal':
-      if(state&&state.hp!==undefined&&!state.dead){
-        const amt=Math.min(data.amount||1, state.maxHp-state.hp);
+      if(state&&state.hp!==undefined&&!state.dead&&state.grid){
         state.hp=Math.min(state.hp+(data.amount||1),state.maxHp);
         render();
         showAnnouncement(`💚 Admin healed you +${data.amount>=99?'FULL':data.amount} HP!`,'success','💚',4);
+      } else {
+        showAnnouncement(`💚 Admin heal — start a run to receive it!`,'info','💚',4);
       }
       break;
     case 'shield_all':
@@ -3577,14 +3581,22 @@ async function pollBroadcast(){
       forcedNextModifier=data.modifierId;
       showAnnouncement(`⚡ Next floor: ${data.modifierId.toUpperCase().replace(/_/g,' ')}!`,'warning','⚡',6);
       break;
-    case 'give_gold':
-      if(state&&state.gold!==undefined&&!state.dead){
+    case 'give_gold':{
+      const inGame=state&&state.gold!==undefined&&!state.dead&&state.grid;
+      if(inGame){
+        // In a run — add gold directly
         state.gold+=data.amount;
-        if(document.getElementById('hud-gold'))
-          document.getElementById('hud-gold').textContent=`💰 ${state.gold}`;
+        const hudGold=document.getElementById('hud-gold');
+        if(hudGold) hudGold.textContent=`💰 ${state.gold}`;
+        showAnnouncement(`💰 Admin gave you +${data.amount} gold!`,'gold','💰',6);
+      } else {
+        // On menu — convert gold to EXP (1 gold = 1 EXP)
+        playerExp+=data.amount;saveExp();
+        showAnnouncement(`⚡ Admin gave +${data.amount} EXP (converted from gold)!`,'success','⚡',6);
+        updateMenuDisplay();
       }
-      showAnnouncement(`💰 Admin gave everyone +${data.amount} gold!`,'gold','💰',6);
       break;
+    }
     case 'give_gems':
       gems+=data.amount;saveGems();updateMenuDisplay();
       showAnnouncement(`💎 Admin gave everyone +${data.amount} gems!`,'success','💎',6);
