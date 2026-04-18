@@ -1461,28 +1461,38 @@ function moveSkillTooltip(e){
 
 // ── Changelog ─────────────────────────────────────────────────
 const CHANGELOG=[
-  {version:'v1.4', date:'Latest', entries:[
-    '🔒 Privacy Policy added — accessible from the main menu footer',
-    '🐛 Fixed: infinite health after retrying a run (HP now hard-capped at 10)',
-    '🐛 Fixed: Gold Vault gacha item conflicted with Bounty Vault boss floor name',
-    '🐛 Fixed: Bonus Floor was pre-cleared before the player could see it',
-    '⚖️ Relics repriced to reflect their downsides (Glass Cannon 15g, Vampirism 20g, etc.)',
-    '⚖️ Shop upgrade costs now scale +25% per stack to prevent snowballing',
+  {version:'v1.5', date:'Latest', entries:[
+    '🐛 Fixed: Bounty Vault floor showed a blank board — grid now fully rebuilds each floor',
+    '🐛 Fixed: announcement progress bar stopped animating after the first one',
+    '🐛 Fixed: stale broadcasts shown to new players on join (now silently skipped)',
+    '🐛 Fixed: refresh command caused a reload loop — now resets after delivery',
+    '🐛 Fixed: poll votes stayed at 0% — write key now sent with vote increments',
+    '🐛 Fixed: inventory cap was blocking gacha rolls — cap raised to 100',
+    '⚖️ Cursed Eye nerfed: now only reveals mines within 3 tiles of revealed cells, cost raised to 180g, extremely rare in shop',
+    '💰 Gold given while not in a run now converts to EXP instead of being lost',
+    '📢 Announcements are now closable by clicking them',
+    '🔒 Privacy Policy added to main menu footer',
+    '🐛 Fixed: infinite health after retrying a run',
+    '🐛 Fixed: Gold Vault gacha item name conflicted with Bounty Vault boss floor',
+    '⚖️ Bounty Vault: hitting a bounty mine now deals 1 HP instead of 2, bounty flag gold now correctly awarded',
+  ]},
+  {version:'v1.4', date:'Previous', entries:[
     '📦 Inventory stacking: duplicate items grouped with ×N count badge',
     '⚡ Item merging: collect 5 of the same item to evolve it into a powerful upgraded version',
     '✨ 20 evolved items with unique enhanced abilities',
     '🎒 Equipping a stacked item scales its effect by stack count',
     '📱 Mobile support: touch to reveal, hold to flag, FLAG MODE toggle button',
-    '🧹 ACTUAL MINESWEEPER run modifier: 1 life only, just like the real game',
+    '🧹 ACTUAL MINESWEEPER run modifier: 1 life only',
     '🆕 New run modifiers: VOLATILE RUN, BLIND FIELD, TINY GRID, RICH RUN, PACIFIST, SUDDEN DEATH',
     '🆕 New relics: VAMPIRISM, WARLORD\'S MAP, CURSED DICE, IRON CROWN',
     '🆕 New upgrades: GOLD FINDER, ARMOR, SCOUT',
     '🆕 New floor modifiers: FROZEN FIELD, BONUS FLOOR, VOLATILE FIELD, RICH VEIN',
+    '⚖️ Shop upgrade costs scale +25% per stack',
+    '⚖️ Relics repriced to reflect their downsides',
   ]},
-  {version:'v1.1', date:'Previous', entries:[
+  {version:'v1.1', date:'Earlier', entries:[
     '🔊 Sound system: background music, SFX for reveals, flags, mine hits, purchases',
     '⚙️ Settings reworked: music & SFX volume sliders, mute toggle, reset to default',
-    '🎒 Inventory close button moved to top-right corner',
     '🔍 Item preview: right-click or ? on any inventory item for detailed breakdown',
     '📖 How to Play reworked with interactive mini minefield',
     '🐛 Fixed: every floor was getting a special modifier',
