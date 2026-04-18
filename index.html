@@ -34,6 +34,7 @@
         <button class="menu-btn inventory-btn" id="btn-inventory">🎒 INVENTORY</button>
         <button class="menu-btn skill-btn" id="btn-skill">🌳 SKILL TREE</button>
         <button class="menu-btn" id="btn-how">HOW TO PLAY</button>
+        <button class="menu-btn" id="btn-achievements">🏅 ACHIEVEMENTS</button>
         <button class="menu-btn changelog-btn" id="btn-changelog">📋 CHANGELOG</button>
       </div>
       <div id="menu-footer">
@@ -262,6 +263,24 @@
         <div id="gacha-inv-list"></div>
       </div>
       <button class="menu-btn primary" id="btn-gacha-back">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS SCREEN -->
+  <div id="achievements-screen" class="screen hidden">
+    <div class="panel-box wide" style="max-height:88vh;overflow-y:auto">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-icon">🏅</div>
+          <div>
+            <h2 class="panel-title">ACHIEVEMENTS</h2>
+            <p class="panel-sub" id="ach-progress">0 / 0 unlocked</p>
+          </div>
+        </div>
+        <div class="panel-header-right" style="font-size:.7rem;color:var(--dim)">+10💎 per unlock</div>
+      </div>
+      <div id="achievements-list"></div>
+      <button class="menu-btn primary" id="btn-achievements-back">← BACK</button>
     </div>
   </div>
 

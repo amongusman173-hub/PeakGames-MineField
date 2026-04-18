@@ -351,7 +351,7 @@ document.addEventListener('mousemove',e=>{
 // ═══════════════════════════════════════════════════════════════
 //  SCREEN TRANSITIONS
 // ═══════════════════════════════════════════════════════════════
-const ALL_SCREENS=['menu-screen','gacha-screen','howto-screen','modifier-screen','game-screen','shop-screen','end-screen','settings-screen','inventory-screen','run-mods-screen','pause-screen','skill-screen','changelog-screen'];
+const ALL_SCREENS=['menu-screen','gacha-screen','howto-screen','modifier-screen','game-screen','shop-screen','end-screen','settings-screen','inventory-screen','run-mods-screen','pause-screen','skill-screen','changelog-screen','achievements-screen'];
 function showScreen(id,cb){
   const cur=ALL_SCREENS.map(s=>document.getElementById(s)).find(el=>!el.classList.contains('hidden'));
   function doShow(){
@@ -420,6 +420,7 @@ document.addEventListener('click', e=>{
 document.getElementById('btn-play').addEventListener('click',       ()=>startGame());
 document.getElementById('btn-gacha').addEventListener('click',      ()=>openGacha());
 document.getElementById('btn-how').addEventListener('click',        ()=>{initHowtoGrid();showScreen('howto-screen');});
+document.getElementById('btn-achievements').addEventListener('click', ()=>openAchievements());
 document.getElementById('btn-back').addEventListener('click',       ()=>showScreen('menu-screen'));
 document.getElementById('btn-gacha-back').addEventListener('click', ()=>showScreen('menu-screen'));
 document.getElementById('btn-retry').addEventListener('click',      ()=>startGame());
@@ -471,6 +472,7 @@ document.getElementById('btn-skill-back').addEventListener('click',()=>showScree
 // Changelog
 document.getElementById('btn-changelog').addEventListener('click',()=>openChangelog());
 document.getElementById('btn-changelog-back').addEventListener('click',()=>showScreen('menu-screen'));
+document.getElementById('btn-achievements-back').addEventListener('click',()=>showScreen('menu-screen'));
 
 // Run Modifiers
 document.getElementById('btn-run-mods-back').addEventListener('click',()=>showScreen('menu-screen'));
@@ -860,7 +862,7 @@ function mergeItems(baseId){
   // Add evolved item
   gachaInventory.push({...evolved});
   saveGacha();saveEquipped();
-  // Flash
+  state._mergedItem=true;
   flashInventoryMsg(`⚡ MERGED into ${evolved.name}!`);
   canvasExplode(window.innerWidth/2,window.innerHeight/2,45,40);
   renderInventory();
@@ -1624,14 +1626,11 @@ function updateGachaDisplay(){
 }
 function renderGachaInventory(){
   const list=document.getElementById('gacha-inv-list');
-  list.innerHTML='';
-  if(gachaInventory.length===0){list.innerHTML='<span style="color:var(--dim);font-size:.75rem">No upgrades yet — roll to earn some!</span>';return;}
-  gachaInventory.forEach((item,idx)=>{
-    const tag=document.createElement('div');tag.className='gacha-inv-tag';
-    tag.innerHTML=`${item.icon} ${item.name} <span class="remove-tag" data-idx="${idx}">✕</span>`;
-    tag.querySelector('.remove-tag').addEventListener('click',()=>{gachaInventory.splice(idx,1);saveGacha();renderGachaInventory();});
-    list.appendChild(tag);
-  });
+  if(!list)return;
+  const total=gachaInventory.length;
+  list.innerHTML=total>0
+    ?`<span style="color:var(--dim);font-size:.75rem">💎 ${total} item${total!==1?'s':''} collected — view in Inventory</span>`
+    :'<span style="color:var(--dim);font-size:.75rem">No upgrades yet — roll to earn some!</span>';
 }
 
 document.getElementById('btn-roll1').addEventListener('click',()=>doGachaRoll(1));
@@ -1794,21 +1793,21 @@ function startGame(){
   if(activeRunMods.includes('no_gold')){state.gold=0;}
 
   // Apply equipped inventory items (with stacking and evolved effects)
-  // s_inv3 (Loadout Master): effects apply twice
+  // s_inv3 (Loadout Master): gold/upgrade effects apply twice, but NOT HP
   const effectMult=getSkillEffect('s_inv3')?2:1;
   activeItems.forEach(item=>{
     if(!item.effect)return;
-    const stacks=(item.stackCount||1)*effectMult;
-    if(item.effect.gold)    state.gold+=item.effect.gold*stacks;
+    const stacks=item.stackCount||1;
+    const goldStacks=stacks*effectMult;
+    const upgStacks=(item.effect.upgradeStacks||1)*stacks*effectMult;
+    if(item.effect.gold)    state.gold+=item.effect.gold*goldStacks;
     if(item.effect.perk)    state.perks[item.effect.perk]=true;
     if(item.effect.perk2)   state.perks[item.effect.perk2]=true;
-    const upgStacks=(item.effect.upgradeStacks||1)*stacks;
     if(item.effect.upgrade) state.upgrades[item.effect.upgrade]=(state.upgrades[item.effect.upgrade]||0)+upgStacks;
+    // HP effects are NOT multiplied — that would give infinite lives
     if(item.effect.maxHp&&!ironMan){state.maxHp=Math.max(state.maxHp,item.effect.maxHp);state.hp=state.maxHp;}
     if(item.effect.bonusHp&&!ironMan){state.maxHp+=item.effect.bonusHp;state.hp=state.maxHp;}
-    // luckyBoost: raise lucky chance to 30%
     if(item.effect.luckyBoost) state.luckyBoost=true;
-    // treasurerBoost: 30% conversion instead of 20%
     if(item.effect.treasurerBoost) state.treasurerBoost=true;
   });
 
@@ -1993,6 +1992,7 @@ function buildFloor(){
     if(!cells[i].mine) cells[i].adjacent=getNeighbors(i,cols,rows).filter(n=>cells[n].mine).length;
 
   state.grid={cells,cols,rows,mines};
+  state.gridId=`${state.floor}-${Date.now()}`; // unique per floor build
   state.perfectFloor=true;
   state.combo=0;
   state.floorCleared=false;
@@ -2228,6 +2228,7 @@ function onReveal(idx){
     screenShake(10,400);
     playsfx('explode');
     flashMessage(`💥  MINE HIT  −${dmg} HP  −50`,'#e94560');
+    trackAchievementStat('totalDmg',dmg);
 
     // Variant effects
     if(cell.variant==='scatter'){
@@ -2340,6 +2341,7 @@ function checkFloorClear(){
   if(state.modifier&&state.modifier.id==='boss_titan'){
     state.score+=300;flashMessage('💥 TITAN CLEARED! +300 BONUS','#ff4466');
   }
+  if(state.modifier&&state.modifier.isBoss) trackAchievementStat('bossCleared',1);
 
   // Base gold from field size (small=100, medium=150, large=250)
   const total=state.grid.cols*state.grid.rows;
@@ -2387,6 +2389,7 @@ function checkFloorClear(){
     if(state.relics['cursed_dice']) perfBonus*=2;
     state.score+=perfBonus;
     flashMessage(`✨ PERFECT FLOOR! +${perfBonus} score`,'#f5c842');
+    trackAchievementStat('perfectCount',1);
     if(state.perks['medic']||getSkillEffect('s_regen1')){state.hp=Math.min(state.hp+1,state.maxHp);flashMessage('💉 MEDIC +1 HP','#4ecca3');}
     // Vampirism relic: +1 HP on perfect
     if(state.relics['vampirism']){state.hp=Math.min(state.hp+1,state.maxHp);flashMessage('🧛 VAMPIRISM +1 HP','#b07aff');}
@@ -2675,6 +2678,9 @@ function showEndScreen(win){
   // Track runs completed
   runsCompleted++;saveRuns();updateMenuDisplay();
 
+  // ── Check achievements ──
+  checkAchievements(win);
+
   document.getElementById('end-icon').textContent=win?'🏆':'💀';
   const title=document.getElementById('end-title');
   title.textContent=win?'YOU WIN':'YOU DIED';title.className=win?'win':'death';
@@ -2722,10 +2728,9 @@ function render(){
   const gridEl=document.getElementById('grid');
   gridEl.style.gridTemplateColumns=`repeat(${cols},44px)`;
 
-  // Always rebuild grid when floor changes or cell count differs
-  const floorKey=`${state.floor}-${cells.length}`;
-  if(gridEl.dataset.floorKey!==floorKey){
-    gridEl.dataset.floorKey=floorKey;
+  // Rebuild grid DOM only when a new floor is loaded (state.gridId changes)
+  if(gridEl.dataset.gridId!==state.gridId){
+    gridEl.dataset.gridId=state.gridId;
     gridEl.innerHTML='';
     gridEl.style.transform='';
     for(let i=0;i<cells.length;i++){
@@ -2892,6 +2897,87 @@ function flashMessage(text,color='#f5a623'){
   el.textContent=text;el.style.color=color;el.style.opacity='1';
   clearTimeout(msgTimer);
   msgTimer=setTimeout(()=>{el.style.opacity='0';},2200);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACHIEVEMENTS
+// ═══════════════════════════════════════════════════════════════
+const ACHIEVEMENTS=[
+  {id:'first_run',    icon:'🎮', name:'FIRST STEPS',      desc:'Complete your first run.',                          check:(w)=>runsCompleted>=1},
+  {id:'floor5',       icon:'🏃', name:'GOING DEEPER',      desc:'Reach floor 5.',                                    check:(w)=>state.floor>=5},
+  {id:'floor10',      icon:'🔥', name:'VETERAN',           desc:'Reach floor 10.',                                   check:(w)=>state.floor>=10},
+  {id:'floor20',      icon:'💀', name:'UNSTOPPABLE',       desc:'Reach floor 20.',                                   check:(w)=>state.floor>=20},
+  {id:'win_run',      icon:'🏆', name:'CHAMPION',          desc:'Win a run.',                                        check:(w)=>w},
+  {id:'score10k',     icon:'📊', name:'HIGH SCORER',       desc:'Score 10,000 in a single run.',                     check:(w)=>state.score>=10000},
+  {id:'score50k',     icon:'💎', name:'SCORE LEGEND',      desc:'Score 50,000 in a single run.',                     check:(w)=>state.score>=50000},
+  {id:'perfect3',     icon:'✨', name:'PERFECTIONIST',     desc:'Clear 3 floors perfectly in one run.',              check:(w)=>state._perfectCount>=3},
+  {id:'no_hit',       icon:'🛡️', name:'UNTOUCHABLE',      desc:'Win a run without taking any damage.',              check:(w)=>w&&state._totalDmg===0},
+  {id:'all_perks',    icon:'⭐', name:'PERK COLLECTOR',    desc:'Own 5 perks at once.',                              check:(w)=>Object.keys(state.perks).length>=5},
+  {id:'relic_run',    icon:'💀', name:'CURSED',            desc:'Finish a run with 3 relics.',                       check:(w)=>Object.keys(state.relics).length>=3},
+  {id:'gold1000',     icon:'💰', name:'GOLD HOARDER',      desc:'End a run with 1000+ gold.',                        check:(w)=>state.gold>=1000},
+  {id:'gems100',      icon:'💎', name:'GEM COLLECTOR',     desc:'Earn 100 gems total.',                              check:(w)=>gems>=100},
+  {id:'runs10',       icon:'🔄', name:'DEDICATED',         desc:'Complete 10 runs.',                                 check:(w)=>runsCompleted>=10},
+  {id:'runs50',       icon:'🌟', name:'OBSESSED',          desc:'Complete 50 runs.',                                 check:(w)=>runsCompleted>=50},
+  {id:'boss_clear',   icon:'💥', name:'BOSS SLAYER',       desc:'Clear a boss floor.',                               check:(w)=>state._bossCleared},
+  {id:'real_sweep',   icon:'🧹', name:'REAL MINESWEEPER',  desc:'Win a run with ACTUAL MINESWEEPER modifier.',       check:(w)=>w&&activeRunMods.includes('real_sweep')},
+  {id:'no_shop',      icon:'🚫', name:'SELF SUFFICIENT',   desc:'Win a run with NO SHOP modifier.',                  check:(w)=>w&&activeRunMods.includes('no_shop')},
+  {id:'gacha50',      icon:'🎰', name:'GACHA ADDICT',      desc:'Collect 50 inventory items.',                       check:(w)=>gachaInventory.length>=50},
+  {id:'merge1',       icon:'⚡', name:'FUSION',            desc:'Merge an item into its evolved form.',              check:(w)=>state._mergedItem},
+];
+
+let unlockedAchievements=JSON.parse(localStorage.getItem('mf_ach')||'[]');
+function saveAchievements(){localStorage.setItem('mf_ach',JSON.stringify(unlockedAchievements));}
+
+function checkAchievements(win){
+  let newUnlocks=[];
+  ACHIEVEMENTS.forEach(a=>{
+    if(unlockedAchievements.includes(a.id))return;
+    try{if(a.check(win)){unlockedAchievements.push(a.id);newUnlocks.push(a);}}catch{}
+  });
+  if(newUnlocks.length){
+    saveAchievements();
+    // Show toasts for new achievements
+    newUnlocks.forEach((a,i)=>{
+      setTimeout(()=>{
+        showAnnouncement(`🏅 ACHIEVEMENT UNLOCKED: ${a.icon} ${a.name} — ${a.desc}`,'gold','🏅',6);
+        // Gem reward
+        gems+=10;saveGems();updateMenuDisplay();
+      },i*800);
+    });
+  }
+}
+
+// Track achievement stats during a run
+function trackAchievementStat(key,val){
+  if(!state._achStats) state._achStats={};
+  state._achStats[key]=(state._achStats[key]||0)+val;
+  // Mirror to state for easy access
+  if(key==='perfectCount') state._perfectCount=(state._perfectCount||0)+val;
+  if(key==='totalDmg')     state._totalDmg=(state._totalDmg||0)+val;
+  if(key==='bossCleared')  state._bossCleared=true;
+}
+
+// ── Achievements screen ───────────────────────────────────────
+function openAchievements(){
+  const list=document.getElementById('achievements-list');
+  if(!list)return;
+  list.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const unlocked=unlockedAchievements.includes(a.id);
+    const div=document.createElement('div');
+    div.className='ach-item'+(unlocked?'':' ach-locked');
+    div.innerHTML=`
+      <div class="ach-icon">${unlocked?a.icon:'🔒'}</div>
+      <div class="ach-body">
+        <div class="ach-name">${unlocked?a.name:'???'}</div>
+        <div class="ach-desc">${unlocked?a.desc:'Complete to unlock'}</div>
+      </div>
+      ${unlocked?'<div class="ach-badge">+10💎</div>':''}`;
+    list.appendChild(div);
+  });
+  const prog=document.getElementById('ach-progress');
+  if(prog) prog.textContent=`${unlockedAchievements.length} / ${ACHIEVEMENTS.length} unlocked`;
+  showScreen('achievements-screen');
 }
 
 // ═══════════════════════════════════════════════════════════════
