@@ -3591,5 +3591,11 @@ function hidePoll(){
 }
 
 // ── Start polling ─────────────────────────────────────────────
-setInterval(pollBroadcast,3000);
-pollBroadcast(); // immediate first check
+// On load: silently mark the current broadcast as already seen
+// so new joiners never see stale commands from previous sessions
+readBroadcast().then(data=>{
+  if(data&&data.ts) lastBroadcastTs=data.ts;
+});
+setInterval(pollBroadcast,5000);
+// First real poll after 5s (after we've marked the current ts as seen)
+setTimeout(pollBroadcast,5000);
