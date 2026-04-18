@@ -2855,18 +2855,15 @@ function flashMessage(text,color='#f5a623'){
 // ═══════════════════════════════════════════════════════════════
 //  ADMIN PANEL — MantleDB powered
 // ═══════════════════════════════════════════════════════════════
-const MANTLE_NS   = 'minefield-roguelike-admin';
+const MANTLE_NS   = 'minefield-game-admin-2024';
 const MANTLE_BASE = 'https://mantledb.sh/v2';
-// Write key — set this after claiming the namespace once
-// curl https://mantledb.sh/v2/claim/minefield-roguelike-admin
-// then paste the returned key here:
-const MANTLE_KEY  = '';  // <-- paste your key here
+const MANTLE_KEY  = '14e998e2f49eff827ff0038869ba01adb583aa044019bd453950c7a5c911ef9b';
 
 async function mantleGet(path){
   try{
     const r=await fetch(`${MANTLE_BASE}/${MANTLE_NS}/${path}`,{
-      headers:MANTLE_KEY?{'X-Mantle-Key':MANTLE_KEY}:{},
       cache:'no-store'
+      // no key needed — public_read entries are readable by anyone
     });
     if(!r.ok)return null;
     return await r.json();
