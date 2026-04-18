@@ -3464,11 +3464,12 @@ function showAnnouncement(text,style,icon,duration){
   document.getElementById('announce-text').textContent=text;
   box.className=`style-${style}`;
   overlay.classList.remove('hidden');
-  fill.style.transition='none';fill.style.width='100%';
-  requestAnimationFrame(()=>{
-    fill.style.transition=`width ${duration}s linear`;
-    fill.style.width='0%';
-  });
+  // Reset bar — remove transition, force reflow, then animate
+  fill.style.transition='none';
+  fill.style.width='100%';
+  fill.getBoundingClientRect(); // force reflow so browser registers the reset
+  fill.style.transition=`width ${duration}s linear`;
+  fill.style.width='0%';
   clearTimeout(announceTimer);
   announceTimer=setTimeout(()=>overlay.classList.add('hidden'),duration*1000);
 }
