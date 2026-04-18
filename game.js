@@ -3268,6 +3268,10 @@ document.getElementById('btn-admin-gems').addEventListener('click',async()=>{
 document.getElementById('btn-admin-refresh').addEventListener('click',async()=>{
   const delay=parseInt(document.getElementById('admin-refresh-delay').value)||5;
   await sendBroadcast({type:'refresh',delay});
+  // Immediately reset after the delay so reloaded tabs don't loop
+  setTimeout(async()=>{
+    await writeBroadcast({type:'none',ts:0});
+  },(delay+1)*1000);
 });
 
 // ── ABUSE TAB ─────────────────────────────────────────────────
@@ -3343,56 +3347,9 @@ document.getElementById('btn-admin-quick').addEventListener('click',()=>{
 // ═══════════════════════════════════════════════════════════════
 //  CLIENT BROADCAST HANDLER — all players poll this
 // ═══════════════════════════════════════════════════════════════
-let lastBroadcastTs=0;
 let forcedNextModifier=null;
 let gems2xActive=false;
 let playerPollVote=null;
-
-async function pollBroadcast(){
-  const data=await readBroadcast();
-  // Ignore if null, no ts, ts=0 (reset), or already seen
-  if(!data||!data.ts||data.ts===0||data.ts<=lastBroadcastTs)return;
-  lastBroadcastTs=data.ts;
-
-  // Route based on type or shorthand fields (following the guide pattern)
-  if(data.msg) showAnnouncement(data.msg, data.style||'info', data.icon||'ℹ️', data.duration||8);
-  if(data.refresh) setTimeout(()=>location.reload(), (data.delay||3)*1000);
-
-  switch(data.type){
-    case 'announcement':
-      showAnnouncement(data.text||data.msg, data.style||'info', data.icon||'ℹ️', data.duration||8);
-      break;
-    case 'poll':
-      showPoll(data.question, data.options, data.endsAt, data.duration);
-      break;
-    case 'poll_end':
-      hidePoll();
-      break;
-    case 'force_modifier':
-      forcedNextModifier=data.modifierId;
-      showAnnouncement(`⚡ Next floor: ${data.modifierId.toUpperCase().replace(/_/g,' ')}!`,'warning','⚡',6);
-      break;
-    case 'give_gold':
-      if(state&&state.gold!==undefined&&!state.dead){
-        state.gold+=data.amount;
-        if(document.getElementById('hud-gold'))
-          document.getElementById('hud-gold').textContent=`💰 ${state.gold}`;
-      }
-      showAnnouncement(`💰 Admin gave everyone +${data.amount} gold!`,'gold','💰',6);
-      break;
-    case 'give_gems':
-      gems+=data.amount;saveGems();updateMenuDisplay();
-      showAnnouncement(`💎 Admin gave everyone +${data.amount} gems!`,'success','💎',6);
-      break;
-    case 'refresh':
-      showAnnouncement(`🔄 Refreshing in ${data.delay||3}s...`,'warning','🔄',data.delay||3);
-      setTimeout(()=>location.reload(),(data.delay||3)*1000);
-      break;
-    case 'abuse':
-      handleAbuse(data);
-      break;
-  }
-}
 
 function handleAbuse(data){
   switch(data.action){
@@ -3591,11 +3548,62 @@ function hidePoll(){
 }
 
 // ── Start polling ─────────────────────────────────────────────
+// Use sessionStorage to persist lastBroadcastTs across reloads in the same tab
+// This prevents refresh loops and stale commands showing after reload
+let lastBroadcastTs=parseInt(sessionStorage.getItem('mf_last_bc')||'0');
+
+async function pollBroadcast(){
+  const data=await readBroadcast();
+  if(!data||!data.ts||data.ts===0||data.ts<=lastBroadcastTs)return;
+  lastBroadcastTs=data.ts;
+  sessionStorage.setItem('mf_last_bc',lastBroadcastTs);
+
+  // Route based on type or shorthand fields (following the guide pattern)
+  if(data.msg&&data.type==='announcement') showAnnouncement(data.msg||data.text, data.style||'info', data.icon||'ℹ️', data.duration||8);
+
+  switch(data.type){
+    case 'announcement':
+      showAnnouncement(data.text||data.msg, data.style||'info', data.icon||'ℹ️', data.duration||8);
+      break;
+    case 'poll':
+      showPoll(data.question, data.options, data.endsAt, data.duration);
+      break;
+    case 'poll_end':
+      hidePoll();
+      break;
+    case 'force_modifier':
+      forcedNextModifier=data.modifierId;
+      showAnnouncement(`⚡ Next floor: ${data.modifierId.toUpperCase().replace(/_/g,' ')}!`,'warning','⚡',6);
+      break;
+    case 'give_gold':
+      if(state&&state.gold!==undefined&&!state.dead){
+        state.gold+=data.amount;
+        if(document.getElementById('hud-gold'))
+          document.getElementById('hud-gold').textContent=`💰 ${state.gold}`;
+      }
+      showAnnouncement(`💰 Admin gave everyone +${data.amount} gold!`,'gold','💰',6);
+      break;
+    case 'give_gems':
+      gems+=data.amount;saveGems();updateMenuDisplay();
+      showAnnouncement(`💎 Admin gave everyone +${data.amount} gems!`,'success','💎',6);
+      break;
+    case 'refresh':
+      showAnnouncement(`🔄 Refreshing in ${data.delay||3}s...`,'warning','🔄',data.delay||3);
+      setTimeout(()=>location.reload(),(data.delay||3)*1000);
+      break;
+    case 'abuse':
+      handleAbuse(data);
+      break;
+  }
+}
+
 // On load: silently mark the current broadcast as already seen
 // so new joiners never see stale commands from previous sessions
 readBroadcast().then(data=>{
-  if(data&&data.ts) lastBroadcastTs=data.ts;
+  if(data&&data.ts&&data.ts>lastBroadcastTs){
+    lastBroadcastTs=data.ts;
+    sessionStorage.setItem('mf_last_bc',lastBroadcastTs);
+  }
 });
 setInterval(pollBroadcast,5000);
-// First real poll after 5s (after we've marked the current ts as seen)
-setTimeout(pollBroadcast,5000);
+setTimeout(pollBroadcast,5500);
