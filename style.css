@@ -705,25 +705,29 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   /* Show mobile flag bar */
   #mobile-flag-bar{display:flex}
 
-  /* Smaller cells on mobile */
-  .cell{width:36px;height:36px;font-size:.82rem;border-radius:5px}
+  /* Cells scale to fit screen — use CSS variable set by JS */
+  .cell{width:var(--cell-size,32px);height:var(--cell-size,32px);font-size:calc(var(--cell-size,32px) * 0.42);border-radius:4px}
   #grid{gap:2px}
-  #grid-wrap{padding:8px}
+  #grid-wrap{padding:6px;max-width:100vw;overflow-x:auto}
 
-  /* Tighter HUD */
-  .hud-block{padding:8px 12px}
-  .hud-val{font-size:.95rem}
-  .hud-label{font-size:.45rem}
+  /* Game screen fits viewport */
+  #game-screen{padding:8px;gap:6px}
+
+  /* Tighter HUD — scrollable on tiny screens */
+  #hud{overflow-x:auto;max-width:100vw}
+  .hud-block{padding:6px 10px}
+  .hud-val{font-size:.88rem}
+  .hud-label{font-size:.42rem;letter-spacing:.12em}
 
   /* Menu buttons full width */
   #menu-buttons{width:min(300px,90vw)}
 
   /* Panels scroll properly */
-  .panel-box,.panel-box.wide{width:96vw;padding:20px 16px}
+  .panel-box,.panel-box.wide{width:96vw;padding:16px 12px}
   .inv-panel{max-height:92vh}
 
-  /* Settings slider wider */
-  .slider-wrap{width:160px}
+  /* Settings slider */
+  .slider-wrap{width:150px}
 
   /* Equipped slots 2-col on small screens */
   #equipped-slots{grid-template-columns:repeat(2,1fr)}
@@ -732,20 +736,25 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .shop-items-grid{grid-template-columns:1fr}
 
   /* Howto grid smaller cells */
-  #howto-grid .cell{width:34px;height:34px;font-size:.75rem}
+  #howto-grid .cell{width:30px;height:30px;font-size:.7rem}
 
   /* Prevent text selection on tap */
   *{-webkit-tap-highlight-color:transparent}
 
-  /* Bigger touch targets for buttons */
-  .menu-btn{padding:15px 0;font-size:.8rem}
-  .toggle-btn{padding:10px 12px}
+  /* Touch targets */
+  .menu-btn{padding:14px 0;font-size:.8rem}
+  .toggle-btn{padding:9px 11px}
+
+  /* Modifier banner smaller */
+  #modifier-banner{font-size:.65rem}
+  #bomb-legend{font-size:.6rem}
+  #message-bar{font-size:.72rem}
 }
 
 @media (max-width:400px){
-  .cell{width:30px;height:30px;font-size:.7rem}
-  .hud-block{padding:6px 8px}
-  .hud-val{font-size:.85rem}
+  .cell{width:var(--cell-size,26px);height:var(--cell-size,26px)}
+  .hud-block{padding:5px 7px}
+  .hud-val{font-size:.8rem}
 }
 
 /* ═══════════════════════════════════════════════════════════════

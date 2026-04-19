@@ -2726,7 +2726,19 @@ function render(){
   document.getElementById('hud-gold').textContent=`💰 ${state.gold}`;
 
   const gridEl=document.getElementById('grid');
-  gridEl.style.gridTemplateColumns=`repeat(${cols},44px)`;
+
+  // On touch/mobile: scale cells to fit viewport width
+  const isMobile=window.matchMedia('(pointer:coarse),(max-width:600px)').matches;
+  let cellSize=44;
+  if(isMobile){
+    const maxW=window.innerWidth-28; // 14px padding each side
+    const gap=2;
+    cellSize=Math.max(22,Math.min(38,Math.floor((maxW-(cols-1)*gap)/cols)));
+    document.documentElement.style.setProperty('--cell-size',cellSize+'px');
+  } else {
+    document.documentElement.style.removeProperty('--cell-size');
+  }
+  gridEl.style.gridTemplateColumns=`repeat(${cols},${isMobile?cellSize+'px':'44px'})`;
 
   // Rebuild grid DOM when cell count changes or a new floor is explicitly built
   if(gridEl.children.length!==cells.length||gridEl.dataset.gridId!==state.gridId){
