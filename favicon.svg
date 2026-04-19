@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#0b0c10"/>
+
+  <!-- Outer glow ring -->
+  <circle cx="32" cy="34" r="20" fill="none" stroke="#e94560" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Mine body -->
+  <circle cx="32" cy="34" r="16" fill="#1a1f30"/>
+  <circle cx="32" cy="34" r="16" fill="none" stroke="#e94560" stroke-width="2"/>
+
+  <!-- Mine spikes (8 directions) -->
+  <g stroke="#e94560" stroke-width="2.5" stroke-linecap="round">
+    <!-- Cardinal -->
+    <line x1="32" y1="14" x2="32" y2="10"/>
+    <line x1="32" y1="54" x2="32" y2="58"/>
+    <line x1="12" y1="34" x2="8"  y2="34"/>
+    <line x1="52" y1="34" x2="56" y2="34"/>
+    <!-- Diagonal -->
+    <line x1="18.7" y1="20.7" x2="15.9" y2="17.9"/>
+    <line x1="45.3" y1="20.7" x2="48.1" y2="17.9"/>
+    <line x1="18.7" y1="47.3" x2="15.9" y2="50.1"/>
+    <line x1="45.3" y1="47.3" x2="48.1" y2="50.1"/>
+  </g>
+
+  <!-- Spike tips (small circles) -->
+  <g fill="#e94560">
+    <circle cx="32" cy="9"  r="2"/>
+    <circle cx="32" cy="59" r="2"/>
+    <circle cx="7"  cy="34" r="2"/>
+    <circle cx="57" cy="34" r="2"/>
+    <circle cx="14.5" cy="16.5" r="2"/>
+    <circle cx="49.5" cy="16.5" r="2"/>
+    <circle cx="14.5" cy="51.5" r="2"/>
+    <circle cx="49.5" cy="51.5" r="2"/>
+  </g>
+
+  <!-- Mine shine highlight -->
+  <circle cx="26" cy="28" r="4.5" fill="white" opacity="0.12"/>
+  <circle cx="24" cy="26" r="2"   fill="white" opacity="0.18"/>
+
+  <!-- Inner detail ring -->
+  <circle cx="32" cy="34" r="9" fill="none" stroke="#4ecca3" stroke-width="1" opacity="0.5"/>
+
+  <!-- Center dot -->
+  <circle cx="32" cy="34" r="3" fill="#4ecca3" opacity="0.8"/>
+
+  <!-- Fuse -->
+  <path d="M32 18 Q36 12 40 8" fill="none" stroke="#f5c842" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="40.5" cy="7.5" r="2.5" fill="#f5c842" opacity="0.9"/>
+  <!-- Fuse spark -->
+  <circle cx="40.5" cy="7.5" r="4" fill="#f5c842" opacity="0.25"/>
+</svg>
