@@ -3108,7 +3108,7 @@ function updateQuickAccessBtn(){
 updateQuickAccessBtn();
 
 // ── Admin password gate ───────────────────────────────────────
-const ADMIN_PASSWORD='mango';
+const ADMIN_PASSWORD='m@ango';
 let adminPasswordInput='';
 let adminPasswordMode='open'; // 'open' | 'enable_quick' | 'disable_quick'
 
